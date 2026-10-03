@@ -1,0 +1,16 @@
+---
+# configure_hardware_dev defaults
+# Hardware development configuration options
+
+# Install FPGA development tools (yosys, nextpnr, etc.)
+install_fpga_tools: false
+
+# Install SDR tools (GNU Radio, UHD)
+install_sdr_tools: false
+
+# USB device vendor IDs to configure
+usb_vendor_ids:
+  arduino: "2341"
+  ch340: "1a86"
+  ftdi: "0403"
+  ettus: "2500"

@@ -1,0 +1,147 @@
+# Certificate Monitoring Configuration for SG Platform
+# Monitors SSL certificate expiration and health across all deployments
+
+apiVersion: v
+kind: ConfigMap
+metadata:
+  name: certificate-monitoring-config
+  namespace: monitoring
+data:
+  prometheus-cert-rules.yaml: |
+    groups:
+    - name: certificate.rules
+      rules:
+      - alert: CertificatexpiresSoon
+        expr: probe_ssl_earliest_cert_expiry - time() <   #  days
+        for: h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL certificate expires soon"
+          description: "SSL certificate for {{ $labels.instance }} expires in less than  days"
+          
+      - alert: CertificatexpiresCritical
+        expr: probe_ssl_earliest_cert_expiry - time() < 5  #  days
+        for: m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SSL certificate expires very soon"
+          description: "SSL certificate for {{ $labels.instance }} expires in less than  days"
+          
+      - alert: CertificateInvalid
+        expr: probe_ssl_earliest_cert_expiry == 
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SSL certificate is invalid"
+          description: "SSL certificate for {{ $labels.instance }} is invalid or not present"
+
+  blackbox-config.yaml: |
+    modules:
+      http_xx:
+        prober: http
+        timeout: 5s
+        http:
+          valid_http_versions: ["HTTP/.", "HTTP/."]
+          valid_status_codes: []
+          method: GT
+          
+      https_cert_check:
+        prober: http
+        timeout: 5s
+        http:
+          valid_http_versions: ["HTTP/.", "HTTP/."]
+          method: GT
+          tls_config:
+            insecure_skip_verify: false
+          preferred_ip_protocol: "ip"
+
+---
+apiVersion: v
+kind: Service
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring
+  labels:
+    app: blackbox-exporter
+spec:
+  ports:
+  - name: blackbox
+    port: 5
+    protocol: TCP
+    targetPort: 5
+  selector:
+    app: blackbox-exporter
+
+---
+apiVersion: apps/v
+kind: Deployment
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring
+spec:
+  replicas: 
+  selector:
+    matchLabels:
+      app: blackbox-exporter
+  template:
+    metadata:
+      labels:
+        app: blackbox-exporter
+    spec:
+      containers:
+      - name: blackbox-exporter
+        image: prom/blackbox-exporter:latest
+        ports:
+        - containerPort: 5
+          name: blackbox
+        volumeMounts:
+        - name: config
+          mountPath: /etc/blackbox_exporter
+        args:
+        - '--config.file=/etc/blackbox_exporter/blackbox-config.yaml'
+        - '--web.listen-address=:5'
+        resources:
+          limits:
+            memory: "Mi"
+            cpu: "m"
+          requests:
+            memory: "Mi"
+            cpu: "5m"
+      volumes:
+      - name: config
+        configMap:
+          name: certificate-monitoring-config
+          items:
+          - key: blackbox-config.yaml
+            path: blackbox-config.yaml
+
+---
+apiVersion: v
+kind: ServiceMonitor
+metadata:
+  name: certificate-monitoring
+  namespace: monitoring
+spec:
+  endpoints:
+  - interval: s
+    params:
+      module: [https_cert_check]
+      target: 
+      - https://app.yourdomain.com
+      - https://staging.yourdomain.com
+      - https://api.yourdomain.com
+    path: /probe
+    port: blackbox
+    relabelings:
+    - sourceLabels: [__param_target]
+      targetLabel: __param_target
+    - sourceLabels: [__param_target]
+      targetLabel: instance
+    - targetLabel: __address__
+      replacement: blackbox-exporter:5
+  selector:
+    matchLabels:
+      app: blackbox-exporter

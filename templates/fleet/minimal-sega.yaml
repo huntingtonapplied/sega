@@ -1,0 +1,96 @@
+# Minimal Working SEGA Configuration Template
+# This template contains only the configuration options that are actually processed by SEGA
+
+version: "2.1"
+
+# Project Information (REQUIRED - processed by project detector)
+project:
+  name: "{{ project_name }}"
+  type: "{{ project_type }}"  # web_app, ml_pipeline, firmware_edge, native_app, hdl_fpga, hybrid_system
+  domain: "example"
+  team: "{{ team_name }}"
+
+# Multi-component configuration (OPTIONAL - processed for hybrid systems)
+{% if components %}
+components:
+{% for component in components %}
+  - name: "{{ component.name }}"
+    type: "{{ component.type }}"
+    path: "{{ component.path }}"
+{% endfor %}
+{% endif %}
+
+# Deployment configuration (REQUIRED - processed by deployment router)
+deployment:
+  targets:
+    staging:
+      type: "aws-ecs"
+      region: "us-east-1"
+      cluster: "example-staging"
+      strategy: "rolling"
+      auto_deploy: true
+      {% if project_type in ['web_app', 'ml_pipeline'] %}
+      infrastructure:
+        port: {{ 3000 if project_type == 'web_app' else 8000 }}
+        health_check_path: "/health"
+        cpu: {{ 256 if project_type == 'web_app' else 1024 }}
+        memory: {{ 512 if project_type == 'web_app' else 2048 }}
+        min_instances: {{ 2 if project_type == 'web_app' else 1 }}
+        max_instances: {{ 10 if project_type == 'web_app' else 5 }}
+        {% if project_type == 'ml_pipeline' %}
+        gpu_required: true
+        {% endif %}
+      {% endif %}
+    production:
+      type: "aws-ecs"
+      region: "us-east-1"
+      cluster: "example-production"
+      strategy: "canary"
+      auto_deploy: false
+      approval_required: true
+      {% if project_type in ['web_app', 'ml_pipeline'] %}
+      infrastructure:
+        port: {{ 3000 if project_type == 'web_app' else 8000 }}
+        health_check_path: "/health"
+        cpu: {{ 256 if project_type == 'web_app' else 1024 }}
+        memory: {{ 512 if project_type == 'web_app' else 2048 }}
+        min_instances: {{ 2 if project_type == 'web_app' else 1 }}
+        max_instances: {{ 10 if project_type == 'web_app' else 5 }}
+        {% if project_type == 'ml_pipeline' %}
+        gpu_required: true
+        {% endif %}
+      {% endif %}
+
+# Build configuration (REQUIRED - processed by build router)
+build:
+  strategy: "containerized"
+  docker:
+    dockerfile: "Dockerfile"
+    context: "."
+    registry: "ecr"
+
+# Firmware-specific deployment (for firmware_edge projects)
+{% if project_type == 'firmware_edge' %}
+deployment:
+  targets:
+    staging:
+      type: "ansible_flash"
+      target_devices: "lab-devices"
+      strategy: "rolling"
+    production:
+      type: "ansible_flash"
+      target_devices: "production-devices"
+      strategy: "blue_green"
+{% endif %}
+
+# NOTE: The following sections are documented but NOT currently processed by SEGA:
+# - testing.*
+# - security.*
+# - intelligence.*
+# - monitoring.*
+# - integrations.*
+# - workspace.* (except for workspace manager)
+# - example_* extensions
+# - project-specific configurations (web.*, ml.*, firmware.*, etc.)
+#
+# Only include these sections if you plan to implement the corresponding features.

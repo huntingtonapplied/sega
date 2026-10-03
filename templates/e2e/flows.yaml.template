@@ -1,0 +1,113 @@
+# =============================================================================
+# SEGA E2E Test Flow Configuration
+# =============================================================================
+# Standardized Location: {project}/tests/e2e/flows.yaml
+#
+# Copy this template to your project:
+#   cp ~/workspace/sega/templates/e2e/flows.yaml.template ~/workspace/{project}/tests/e2e/flows.yaml
+#
+# Run with:
+#   sega probe e2e -p {project}                    # Run all flows
+#   sega probe e2e -p {project} --flow login       # Run specific flow
+#   sega probe e2e -p {project} --headed --debug   # Interactive mode
+# =============================================================================
+
+project: "{PROJECT_NAME}"
+base_url: "http://localhost:{{FRONTEND_PORT}}"
+
+# Environment variables available for interpolation:
+#   {{FRONTEND_PORT}}     - Project frontend port (from PORT_ALLOCATION_STANDARDS)
+#   {{BACKEND_PORT}}      - Project backend port
+#   {{TEST_USER_EMAIL}}   - Test user email
+#   {{TEST_USER_PASSWORD}} - Test user password
+
+# Success criteria defaults (can override per-flow)
+defaults:
+  timeout_ms: 5000
+  max_console_errors: 0
+  max_failed_requests: 0
+  allowed_console_patterns:
+    - ".*DevTools.*"
+    - ".*deprecation.*"
+
+flows:
+  # -------------------------------------------------------------------------
+  # Example: Login Flow
+  # -------------------------------------------------------------------------
+  login:
+    description: "Authenticate test user"
+    actions:
+      - action: navigate
+        selector: "/login"
+
+      - action: fill
+        selector: '[data-testid="email"]'
+        value: "{{TEST_USER_EMAIL}}"
+
+      - action: fill
+        selector: '[data-testid="password"]'
+        value: "{{TEST_USER_PASSWORD}}"
+
+      - action: click
+        selector: '[data-testid="submit"]'
+
+      - action: verify
+        selector: '[data-testid="dashboard"]'
+        timeout_ms: 10000
+
+  # -------------------------------------------------------------------------
+  # Example: CRUD Flow (depends on login)
+  # -------------------------------------------------------------------------
+  create_entity:
+    description: "Create a new entity via UI"
+    preconditions: [login]
+    actions:
+      - action: click
+        selector: '[data-testid="new-btn"]'
+
+      - action: fill
+        selector: '[data-testid="name-input"]'
+        value: "E2E Test Entity"
+
+      - action: click
+        selector: '[data-testid="save-btn"]'
+
+      - action: verify
+        selector: '[data-testid="success-message"]'
+        timeout_ms: 5000
+
+  # -------------------------------------------------------------------------
+  # Example: Navigation Flow
+  # -------------------------------------------------------------------------
+  navigate_sections:
+    description: "Verify main navigation works"
+    preconditions: [login]
+    actions:
+      - action: click
+        selector: '[data-testid="nav-settings"]'
+
+      - action: verify
+        selector: '[data-testid="settings-page"]'
+
+      - action: click
+        selector: '[data-testid="nav-dashboard"]'
+
+      - action: verify
+        selector: '[data-testid="dashboard"]'
+
+# =============================================================================
+# Action Reference
+# =============================================================================
+# action: navigate   - Navigate to URL path (selector = path like "/login")
+# action: click      - Click element matching selector
+# action: fill       - Fill input with value (supports {{ENV_VAR}} interpolation)
+# action: verify     - Wait for element to be visible
+# action: wait       - Wait for specified milliseconds (selector = ms as string)
+# action: screenshot - Capture screenshot (selector = filename)
+#
+# Common selector patterns:
+#   [data-testid="..."]  - Preferred: stable test IDs
+#   #element-id          - By ID
+#   .class-name          - By class
+#   button[type="submit"] - By attribute
+# =============================================================================

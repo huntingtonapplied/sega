@@ -1,0 +1,12 @@
+---
+- name: Configure devops
+  hosts: devops
+  become: true
+  roles:
+    - add_ssh_keys
+    - add_repositories    
+    - install_devops_packages
+    - install_aws   
+    - openvpn_server
+    - openvpn_client_configs
+    - install_gitlab_runner

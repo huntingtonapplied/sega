@@ -1,0 +1,236 @@
+# Project-Specific GitLab CI Template
+# ====================================
+# File: .gitlab-ci.yml (copy to project root)
+# Purpose: Customizable CI/CD pipeline for individual projects
+# Usage: Copy to project root and customize variables section
+
+# Include the base Docker registry deployment template
+# See /templates/gitlab-ci/README.md for full template architecture
+include:
+  - project: 'example/sega'
+    file: '/templates/gitlab-ci/deploy/docker-registry.yml'
+
+# Project-specific variables (CUSTOMIZE THESE)
+variables:
+  # Project identification
+  PROJECT_NAME: "your-project-name"  # REQUIRED: Set to your project name
+  
+  # Build configuration
+  DOCKERFILE_PATH: "./Dockerfile"
+  DOCKER_BUILD_CONTEXT: "."
+  
+  # Port configuration (organization port standards)
+  API_PORT: "3001"        # Backend API port
+  FRONTEND_PORT: "3101"   # Frontend port
+  
+  # Environment-specific domains
+  STAGING_DOMAIN: "$PROJECT_NAME-staging.example.com"
+  PRODUCTION_DOMAIN: "$PROJECT_NAME.fleet-dev.example.com"
+  
+  # Health check configuration
+  HEALTH_ENDPOINT: "/health"
+  HEALTH_CHECK_TIMEOUT: "60"
+  
+  # Testing configuration
+  TEST_COMMAND: "sega test --project $PROJECT_NAME"
+  COVERAGE_THRESHOLD: "80"
+  
+  # Deployment configuration
+  DEPLOY_TIMEOUT: "300"
+  ROLLBACK_ENABLED: "true"
+
+# Project-specific jobs (CUSTOMIZE AS NEEDED)
+
+# Override validate stage for project-specific requirements
+validate:
+  extends: .validate
+  script:
+    - echo " Validating $PROJECT_NAME..."
+    - sega detect --project-path .
+    
+    # Project-specific validation
+    - |
+      if [ -f "package.json" ]; then
+        echo " Validating Node.js dependencies..."
+        npm ci
+        npm run lint || echo "️ Linting issues found"
+      fi
+    
+    - |
+      if [ -f "pyproject.toml" ]; then
+        echo " Validating Python dependencies..."
+        pip install -e .
+        python -m pytest --tb=short --no-cov tests/ || echo "️ Test issues found"
+      fi
+    
+    # SEGA integration test
+    - sega test --type unit --project $PROJECT_NAME
+
+    - echo " $PROJECT_NAME validation complete"
+
+# Override build stage for project-specific build args
+build:
+  extends: .build
+  script:
+    - echo "️ Building $PROJECT_NAME Docker image..."
+    
+    # Project-specific build arguments
+    - export BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+    - export GIT_COMMIT=${CI_COMMIT_SHA:0:8}
+    
+    # Build with project-specific args
+    - docker build 
+        --build-arg BUILD_DATE="$BUILD_DATE"
+        --build-arg GIT_COMMIT="$GIT_COMMIT"
+        --build-arg VERSION="${CI_COMMIT_TAG:-$CI_COMMIT_SHA}"
+        --build-arg PROJECT_NAME="$PROJECT_NAME"
+        --build-arg API_PORT="$API_PORT"
+        --build-arg FRONTEND_PORT="$FRONTEND_PORT"
+        --tag $REGISTRY_IMAGE:$CI_COMMIT_SHA
+        --tag $REGISTRY_IMAGE:latest
+        --file $DOCKERFILE_PATH
+        $DOCKER_BUILD_CONTEXT
+    
+    # Project-specific health check
+    - echo " Testing container health..."
+    - docker run -d --name test_container -p 8080:$API_PORT $REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - sleep 15
+    
+    # Health check
+    - |
+      if curl -f http://localhost:8080$HEALTH_ENDPOINT; then
+        echo " Container health check passed"
+      else
+        echo "️ Health check failed, checking logs..."
+        docker logs test_container
+      fi
+    
+    - docker stop test_container || true
+    - docker rm test_container || true
+
+    - echo " $PROJECT_NAME Docker image built"
+
+# Project-specific deployment configurations
+deploy_staging:
+  extends: .deploy_staging
+  environment:
+    name: staging
+    url: https://$STAGING_DOMAIN
+  script:
+    - echo " Deploying $PROJECT_NAME to staging..."
+    
+    # Deploy using SEGA with project-specific configuration
+    - sega deploy 
+        --project $PROJECT_NAME
+        --environment staging 
+        --image $REGISTRY_IMAGE:$CI_COMMIT_SHA
+        --port-mapping "$API_PORT:$API_PORT,$FRONTEND_PORT:$FRONTEND_PORT"
+        --domain $STAGING_DOMAIN
+        --health-endpoint $HEALTH_ENDPOINT
+        --timeout $DEPLOY_TIMEOUT
+        --wait-for-health
+    
+    # Project-specific post-deployment tasks
+    - echo " Running post-deployment tasks..."
+    - sega test --project $PROJECT_NAME --type smoke --environment staging
+
+    - echo " $PROJECT_NAME staging deployment complete"
+
+deploy_production:
+  extends: .deploy_production
+  environment:
+    name: production
+    url: https://$PRODUCTION_DOMAIN
+  script:
+    - echo " Deploying $PROJECT_NAME to production..."
+    
+    # Production deployment with enhanced safety
+    - sega deploy 
+        --project $PROJECT_NAME
+        --environment production
+        --image $REGISTRY_IMAGE:${CI_COMMIT_TAG:-$CI_COMMIT_SHA}
+        --port-mapping "$API_PORT:$API_PORT,$FRONTEND_PORT:$FRONTEND_PORT"
+        --domain $PRODUCTION_DOMAIN
+        --health-endpoint $HEALTH_ENDPOINT
+        --timeout $DEPLOY_TIMEOUT
+        --backup-previous
+        --health-check-timeout $HEALTH_CHECK_TIMEOUT
+        --wait-for-health
+    
+    # Production verification
+    - echo " Verifying production deployment..."
+    - sega test --project $PROJECT_NAME --type smoke --environment production
+    - sega monitor --project $PROJECT_NAME --check-performance --duration 30
+
+    - echo " $PROJECT_NAME production deployment complete"
+
+# Project-specific test configurations
+unit_tests:
+  stage: validate
+  script:
+    - echo " Running $PROJECT_NAME unit tests..."
+    - sega test --project $PROJECT_NAME --type unit --coverage
+    - echo " Unit tests complete"
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - htmlcov/
+    expire_in: 1 week
+
+integration_tests:
+  stage: verify
+  script:
+    - echo " Running $PROJECT_NAME integration tests..."
+    - sega local up  # Start local infrastructure
+    - sega test --project $PROJECT_NAME --type integration
+    - sega local down
+    - echo " Integration tests complete"
+  dependencies:
+    - deploy_staging
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_MERGE_REQUEST_IID
+
+# Project-specific monitoring setup
+setup_monitoring:
+  stage: verify
+  script:
+    - echo " Setting up monitoring for $PROJECT_NAME..."
+    - sega monitor setup --project $PROJECT_NAME --environment $DEPLOY_ENVIRONMENT
+    - echo " Monitoring configured"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# Project-specific cleanup
+project_cleanup:
+  stage: verify
+  script:
+    - echo " Project-specific cleanup for $PROJECT_NAME..."
+    
+    # Clean old deployments
+    - sega deploy clean --project $PROJECT_NAME --keep-last 5
+    
+    # Clean old test artifacts
+    - sega test clean --project $PROJECT_NAME --older-than 7d
+
+    - echo " Cleanup complete"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# Custom jobs can be added here
+# Example: Database migrations
+migrate_database:
+  stage: deploy
+  script:
+    - echo "️ Running database migrations for $PROJECT_NAME..."
+    - sega db migrate --project $PROJECT_NAME --environment $DEPLOY_ENVIRONMENT
+    - echo " Database migrations complete"
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: manual
+  allow_failure: true

@@ -1,0 +1,19 @@
+---
+# Default variables for install_rust_engine role
+
+# Rust ngine Configuration
+rust_engine_image: "{{ docker_registry }}/example/atlas-engine:latest"
+rust_engine_command: []
+rust_engine_environment:
+  RUST_LOG: "{{ rust_log_level | default('info') }}"
+  RUST_CKTRC: "{{ rust_backtrace | default('') }}"
+
+# Rust-specific settings
+rust_log_level: "info"
+rust_backtrace: ""
+rust_engine_config: {}
+
+# Performance tuning for Rust engines
+rust_performance:
+  memory_limit: "G"
+  cpu_limit: "."

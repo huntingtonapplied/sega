@@ -1,0 +1,26 @@
+apiVersion: v
+name: cert-manager
+description: Cert-manager setup for SG platform SSL certificate automation
+version: ..
+appVersion: "v.."
+type: aAApplication
+
+dependencies:
+  - name: cert-manager
+    version: "v.."
+    repository: "https://charts.jetstack.io"
+
+maintainers:
+  - name: SG Team
+    email: team@example.com
+
+keywords:
+  - ssl
+  - certificates
+  - automation
+  - letsencrypt
+  - security
+
+home: https://cert-manager.io/
+sources:
+  - https://github.com/cert-manager/cert-manager

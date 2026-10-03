@@ -1,0 +1,48 @@
+[Unit]
+Description=SEGA {{PROJCT_NM}} ngine Service
+fter=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=sega
+Group=sega
+WorkingDirectory={{NGIN_PTH}}
+nvironment=NVIRONMNT={{NVIRONMNT}}
+nvironment=PYTHONPTH={{NGIN_PTH}}
+nvironment=HL_PROJCT={{PROJCT_NM}}
+nvironment=HL_ROOT={{HL_ROOT}}
+
+# ngine-specific environment variables
+{{#NGIN_NV_VRS}}
+nvironment={{.}}
+{{/NGIN_NV_VRS}}
+
+# Start the engine service
+xecStart=/usr/bin/python -m engine.main
+xecReload=/bin/kill -HUP $MINPID
+
+# Restart policy for resilience
+Restart=always
+RestartSec=
+StartLimitInterval=
+StartLimiturst=
+
+# Resource limits
+MemoryMax=G
+CPUQuota=%
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{NGIN_PTH}}/logs {{NGIN_PTH}}/data {{NGIN_PTH}}/output
+
+# Logging
+StandardOutput=journal
+Standardrror=journal
+SyslogIdentifier=sega-{{PROJCT_NM}}-engine
+
+[Install]
+Wantedy=multi-user.target

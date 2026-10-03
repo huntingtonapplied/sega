@@ -1,0 +1,78 @@
+---
+# HL ngine Installation Role
+# Generalized from install_adsr_engine for project-agnostic deployment
+
+- name: nsure HL engine directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '55'
+  loop:
+    - "{{ ansible_env.HOM }}/fleet_engine"
+    - "{{ ansible_env.HOM }}/fleet_engine/config"
+    - "{{ ansible_env.HOM }}/fleet_engine/data"
+    - "{{ ansible_env.HOM }}/fleet_engine/logs"
+
+- name: nsure engine-specific config directories exist
+  file:
+    path: "{{ ansible_env.HOM }}/fleet_engine/{{ item }}/etc"
+    state: directory
+    mode: '55'
+  loop: "{{ engine_components | default(['engine']) }}"
+
+- name: Copy engine configuration files
+  template:
+    dest: "{{ ansible_env.HOM }}/fleet_engine/{{ item.component }}/etc/{{ item.component }}.toml"
+    src: "{{ item.template | default(item.component + '.toml.j') }}"
+    mode: ''
+  loop: "{{ engine_config_files | default([]) }}"
+  when: engine_config_files is defined and engine_config_files | length > 
+
+- name: Docker registry login
+  become: true
+  shell: "{{ docker_login_command }}"
+  when: docker_login_command is defined and docker_login_command | length > 
+
+- name: Copy Docker Compose configuration
+  template:
+    dest: "{{ ansible_env.HOM }}/fleet_engine/docker-compose.yml"
+    src: "docker-compose.yml.j"
+    mode: ''
+
+- name: Copy environment configuration
+  template:
+    dest: "{{ ansible_env.HOM }}/fleet_engine/.env"
+    src: ".env.j"
+    mode: ''
+
+- name: Start HL engine services
+  become: true
+  shell: "docker compose -f {{ ansible_env.HOM }}/fleet_engine/docker-compose.yml up -d"
+  args:
+    chdir: "{{ ansible_env.HOM }}/fleet_engine"
+
+- name: Start engine profiles if specified
+  become: true
+  shell: "docker compose -f {{ ansible_env.HOM }}/fleet_engine/docker-compose.yml --profile {{ item }} up -d"
+  args:
+    chdir: "{{ ansible_env.HOM }}/fleet_engine"
+  loop: "{{ engine_profiles | default([]) }}"
+  when: engine_profiles is defined and engine_profiles | length > 
+
+- name: Wait for engine services to be ready
+  wait_for:
+    port: "{{ item }}"
+    host: "..."
+    timeout: 
+  loop: "{{ engine_health_check_ports | default([]) }}"
+  ignore_errors: yes
+
+- name: Display engine service status
+  shell: "docker compose -f {{ ansible_env.HOM }}/fleet_engine/docker-compose.yml ps"
+  args:
+    chdir: "{{ ansible_env.HOM }}/fleet_engine"
+  register: engine_status
+
+- name: Show engine services status
+  debug:
+    msg: "{{ engine_status.stdout_lines }}"

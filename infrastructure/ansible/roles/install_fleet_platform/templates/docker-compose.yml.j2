@@ -1,0 +1,166 @@
+services:
+  {% if platform_services.database | default(true) %}
+  database:
+    image: {{ database_image | default('postgres:15') }}
+    restart: always
+    ports:
+      - "{{ database_port | default('5432') }}:5432"
+    volumes:
+      - database-storage:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: {{ database_name | default('example') }}
+      POSTGRES_USER: {{ database_user | default('example') }}
+      POSTGRES_PASSWORD: {{ database_password | default('example') }}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ database_user | default('example') }} -d {{ database_name | default('example') }}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: {{ database_memory | default('2G') }}
+  {% endif %}
+
+  {% if platform_services.redis | default(true) %}
+  redis:
+    image: {{ redis_image | default('redis:7') }}
+    restart: always
+    ports:
+      - "{{ redis_port | default('6379') }}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+  {% endif %}
+
+  {% if platform_services.backend | default(true) %}
+  backend:
+    image: {{ fleet_backend_image | default(docker_registry + '/example/backend:latest') }}
+    restart: always
+    ports:
+      - "{{ backend_port | default('8000') }}:8000"
+    environment:
+      DEPLOYMENT_NAME: {{ deployment_name | default('example-platform') }}
+      DATABASE_URL: postgresql://{{ database_user | default('example') }}:{{ database_password | default('example') }}@database:5432/{{ database_name | default('example') }}
+      REDIS_URL: redis://redis:6379/0
+      {% for key, value in (backend_environment | default({})).items() %}
+      {{ key }}: {{ value }}
+      {% endfor %}
+    depends_on:
+      {% if platform_services.database | default(true) %}
+      database:
+        condition: service_healthy
+      {% endif %}
+      {% if platform_services.redis | default(true) %}
+      redis:
+        condition: service_healthy
+      {% endif %}
+    {% if backend_volumes | default([]) | length > 0 %}
+    volumes:
+      {% for volume in backend_volumes %}
+      - {{ volume }}
+      {% endfor %}
+    {% endif %}
+  {% endif %}
+
+  {% if platform_services.frontend | default(true) %}
+  frontend:
+    image: {{ fleet_frontend_image | default(docker_registry + '/example/frontend:latest') }}
+    restart: always
+    ports:
+      - "{{ frontend_port | default('80') }}:80"
+    environment:
+      REACT_APP_BACKEND_URL: {{ frontend_backend_url | default('http://localhost:' + (backend_port | default('8000')) | string) }}
+      {% for key, value in (frontend_environment | default({})).items() %}
+      {{ key }}: {{ value }}
+      {% endfor %}
+    {% if platform_services.backend | default(true) %}
+    depends_on:
+      - backend
+    {% endif %}
+  {% endif %}
+
+  {% if platform_services.worker | default(false) %}
+  worker:
+    image: {{ fleet_backend_image | default(docker_registry + '/example/backend:latest') }}
+    restart: always
+    command: {{ worker_command | default('["celery", "worker"]') }}
+    environment:
+      DATABASE_URL: postgresql://{{ database_user | default('example') }}:{{ database_password | default('example') }}@database:5432/{{ database_name | default('example') }}
+      REDIS_URL: redis://redis:6379/0
+      {% for key, value in (backend_environment | default({})).items() %}
+      {{ key }}: {{ value }}
+      {% endfor %}
+    depends_on:
+      {% if platform_services.database | default(true) %}
+      - database
+      {% endif %}
+      {% if platform_services.redis | default(true) %}
+      - redis
+      {% endif %}
+      {% if platform_services.backend | default(true) %}
+      - backend
+      {% endif %}
+  {% endif %}
+
+  {% if platform_services.scheduler | default(false) %}
+  scheduler:
+    image: {{ fleet_backend_image | default(docker_registry + '/example/backend:latest') }}
+    restart: always
+    command: {{ scheduler_command | default('["celery", "beat"]') }}
+    environment:
+      DATABASE_URL: postgresql://{{ database_user | default('example') }}:{{ database_password | default('example') }}@database:5432/{{ database_name | default('example') }}
+      REDIS_URL: redis://redis:6379/0
+      {% for key, value in (backend_environment | default({})).items() %}
+      {{ key }}: {{ value }}
+      {% endfor %}
+    depends_on:
+      {% if platform_services.redis | default(true) %}
+      - redis
+      {% endif %}
+      {% if platform_services.worker | default(false) %}
+      - worker
+      {% endif %}
+  {% endif %}
+
+  {% if platform_services.monitoring | default(false) %}
+  flower:
+    image: {{ flower_image | default('mher/flower:0.9.7') }}
+    restart: always
+    command: ['flower', '--broker=redis://redis:6379', '--port=5555']
+    ports:
+      - "{{ flower_port | default('5555') }}:5555"
+    depends_on:
+      {% if platform_services.redis | default(true) %}
+      - redis
+      {% endif %}
+  {% endif %}
+
+  {% if platform_services.nginx | default(false) %}
+  nginx:
+    image: {{ nginx_image | default('nginx:alpine') }}
+    restart: always
+    ports:
+      - "{{ nginx_port | default('80') }}:80"
+      - "{{ nginx_ssl_port | default('443') }}:443"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+      {% if ssl_certificates | default(false) %}
+      - ./config/ssl:/etc/nginx/ssl:ro
+      {% endif %}
+    depends_on:
+      {% if platform_services.frontend | default(true) %}
+      - frontend
+      {% endif %}
+      {% if platform_services.backend | default(true) %}
+      - backend
+      {% endif %}
+  {% endif %}
+
+volumes:
+  {% if platform_services.database | default(true) %}
+  database-storage:
+    external: false
+  {% endif %}

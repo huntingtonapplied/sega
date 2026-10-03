@@ -1,0 +1,56 @@
+- name: Install and configure monitoring agents
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Node Exporter
+      ansible.builtin.shell: |
+        curl -LO https://github.com/prometheus/node_exporter/releases/download/v1.3.1/node_exporter-1.3.1.linux-amd64.tar.gz
+        tar xvfz node_exporter-1.3.1.linux-amd64.tar.gz
+        cp node_exporter-1.3.1.linux-amd64/node_exporter /usr/local/bin/
+        useradd --no-create-home --shell /bin/false node_exporter
+        echo "[Unit]
+        Description=Node Exporter
+        Wants=network-online.target
+        After=network-online.target
+        [Service]
+        User=node_exporter
+        ExecStart=/usr/local/bin/node_exporter
+        [Install]
+        WantedBy=default.target" > /etc/systemd/system/node_exporter.service
+        systemctl daemon-reload
+        systemctl enable node_exporter
+        systemctl start node_exporter
+
+    - name: Install Promtail
+      ansible.builtin.shell: |
+        curl -LO https://github.com/grafana/loki/releases/download/v2.7.1/promtail-linux-amd64.zip
+        unzip promtail-linux-amd64.zip
+        mv promtail-linux-amd64 /usr/local/bin/promtail
+        echo "[Unit]
+        Description=Promtail
+        Wants=network-online.target
+        After=network-online.target
+        [Service]
+        ExecStart=/usr/local/bin/promtail -config.file /etc/promtail/config.yml
+        Restart=always
+        [Install]
+        WantedBy=multi-user.target" > /etc/systemd/system/promtail.service
+        mkdir -p /etc/promtail/
+        echo "server:
+          http_listen_port: 9080
+          grpc_listen_port: 9095
+        positions:
+          filename: /tmp/positions.yaml
+        clients:
+          - url: http://<loki-server>:3100/loki/api/v1/push
+        scrape_configs:
+          - job_name: system
+            static_configs:
+              - targets:
+                  - localhost
+                labels:
+                  job: varlogs
+                  __path__: /var/log/*log" > /etc/promtail/config.yml
+        systemctl daemon-reload
+        systemctl enable promtail
+        systemctl start promtail

@@ -1,0 +1,29 @@
+{{- $name := include "fleet-project.name" . -}}
+{{- $ns := include "fleet-project.namespace" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-config
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" . | nindent 4 }}
+data:
+  # Consumed as env REDIS_URL. Defaults to the in-cluster redis Service. When
+  # requireAuth is on, the password is embedded so URL-based consumers (api
+  # /health, orchestration coordinator) authenticate — worker.py applies
+  # REDIS_PASSWORD separately, but from_url(REDIS_URL) callers do not.
+  redis_url: {{ .Values.config.redisUrl | default (printf "redis://%s%s:%v/0" (ternary (printf ":%s@" (.Values.secret.data.redisPassword | default "")) "" (.Values.redis.requireAuth | default false)) (include "fleet-project.redisHost" .) .Values.redis.port) | quote }}
+{{- if .Values.config.engineToml }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-engine-config
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" . | nindent 4 }}
+data:
+  # Mounted at /app/<project>.toml (subPath) in worker pods.
+  {{ $name }}.toml: |
+{{ .Values.config.engineToml | indent 4 }}
+{{- end }}

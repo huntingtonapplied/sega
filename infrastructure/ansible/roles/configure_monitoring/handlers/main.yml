@@ -1,0 +1,14 @@
+---
+# Handlers for configure_monitoring role
+
+- name: restart prometheus
+  become: true
+  systemd:
+    name: prometheus
+    state: restarted
+
+- name: restart grafana
+  become: true
+  systemd:
+    name: grafana-server
+    state: restarted

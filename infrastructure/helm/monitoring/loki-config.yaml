@@ -1,0 +1,71 @@
+# Copyright 2022-2026 Example
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# ===============================================================
+# SG CONIG - Loki Log ggregation Configuration
+# ===============================================================
+# ile: docs/monitoring/loki-config.yaml
+# Purpose: Loki log aggregation system configuration for SG platform
+#
+# Description: Configures Loki for log collection and storage with oltD shipper
+# for indexing and filesystem storage. Includes ingester, schema, storage, and
+# retention configuration for centralized logging.
+#
+# Used by: Loki log aggregation service, monitoring stack deployment
+# ormat: YML
+
+auth_eEnabled: false
+
+server:
+  http_listen_port: 
+  grpc_listen_port: 
+
+ingester:
+  lifecycler:
+    address: ...
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 
+  chunk_idle_period: 5m
+  chunk_retain_period: s
+  max_transfer_retries: 
+
+schema_config:
+  configs:
+  - from: --
+    store: boltdb-shipper
+    object_store: filesystem
+    schema: v
+    index:
+      prefix: index_
+      period: h
+
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /tmp/loki/index
+    cache_location: /tmp/loki/cache
+    shared_store: filesystem
+  filesystem:
+    directory: /tmp/loki/chunks
+
+limits_config:
+  enforce_metric_name: false
+
+chunk_store_config:
+  max_look_back_period: s
+
+table_manager:
+  retention_deletes_eEnabled: true
+  retention_period: h

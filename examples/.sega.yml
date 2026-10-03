@@ -1,0 +1,102 @@
+# Example SEGA Configuration File
+# Copy this to your workspace root and customize as needed
+
+workspace:
+  name: "My Workspace"
+  organization: "My Organization"
+  root: "."  # Relative to this config file
+  compose_project_prefix: "myapp"
+
+# Optional: Shared infrastructure configuration
+# Uncomment and configure if you want shared databases/caches
+# infrastructure:
+#   compose_file: "infrastructure/docker-compose.yml"
+#   profiles:
+#     development:
+#       postgres:
+#         port: 5432
+#         database: "myapp_dev"
+#         user: "devuser"
+#         password: "devpass"
+#       redis:
+#         port: 6379
+#     testing:
+#       postgres:
+#         port: 5433
+#         database: "myapp_test"
+#         user: "testuser"
+#         password: "testpass"
+#       redis:
+#         port: 6380
+
+# Project discovery rules
+project_discovery:
+  # Directories to scan for projects
+  scan_paths:
+    - "."
+    - "services"  # Example: if you keep services in a subdirectory
+
+  # Directories to exclude from scanning
+  exclude_paths:
+    - ".git"
+    - "node_modules"
+    - "__pycache__"
+    - "vendor"
+    - "dist"
+    - "build"
+
+  # Files that indicate a deployable project
+  project_markers:
+    - "docker-compose.yml"
+    - "docker-compose.dev.yml"
+    - "docker-compose.override.yml"
+
+  # Where to look for compose files (in order of preference)
+  compose_file_patterns:
+    - "docker-compose.override.yml"
+    - "docker-compose.dev.yml"
+    - "docker-compose.yml"
+    - "deployment/docker-compose.yml"
+
+# Optional: Project-specific configurations
+# projects:
+#   frontend:
+#     compose_file: "docker-compose.yml"
+#     environment:
+#       API_URL: "http://localhost:8000"
+#
+#   backend:
+#     has_makefile: true
+#     compose_file: "docker-compose.yml"
+#     environment:
+#       DEBUG: "true"
+
+# Environment defaults for all projects
+environment_defaults:
+  NODE_ENV: "development"
+  ENV: "development"
+  LOG_LEVEL: "debug"
+  TZ: "UTC"
+
+# Optional: Development environment setup
+# development:
+#   shared_venv:
+#     path: ".venv"
+#     setup_script: "scripts/setup-dev.sh"
+
+# Deployment behavior
+deployment:
+  # Whether to use Makefile targets if available
+  prefer_makefile: true
+
+  # Makefile targets to try (in order)
+  makefile_targets:
+    up: ["up", "start", "dev", "run"]
+    down: ["down", "stop", "halt"]
+    restart: ["restart", "reload"]
+
+  # Health check configuration
+  health_check:
+    enabled: true
+    timeout: 30
+    interval: 10

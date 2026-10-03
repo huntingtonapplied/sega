@@ -1,0 +1,39 @@
+{
+  "services": {
+    "start": "make dev-shared",
+    "healthCheck": "http://localhost:3001/health",
+    "stop": "make down"
+  },
+  "testData": {
+    "strategy": "api_creation_ui_validation",
+    "resetCommand": "curl -X DELETE http://localhost:3001/api/test-data",
+    "seedCommand": "curl -X POST http://localhost:3001/api/test-data/seed"
+  },
+  "validation": {
+    "tiers": ["static", "dynamic", "integration"],
+    "successCriteria": "database_write_then_ui_read"
+  },
+  "selectors": {
+    "usernameField": "input[type=\"email\"], input[name=\"username\"]",
+    "passwordField": "input[type=\"password\"]",
+    "loginButton": "button[type=\"submit\"], input[type=\"submit\"]",
+    "titleField": "input[placeholder*=\"title\"], textarea[placeholder*=\"title\"]",
+    "contentField": "textarea[placeholder*=\"content\"], div[contenteditable=\"true\"]",
+    "publishButton": "button[type=\"submit\"], button:contains(\"Publish\")"
+  },
+  "authentication": {
+    "testUser": {
+      "email": "test@example.com",
+      "password": "testpassword123"
+    },
+    "loginUrl": "/login"
+  },
+  "browser": {
+    "headless": true,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "timeout": 30000
+  }
+}

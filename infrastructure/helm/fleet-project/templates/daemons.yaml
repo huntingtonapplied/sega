@@ -1,0 +1,94 @@
+{{- $root := . -}}
+{{- $name := include "fleet-project.name" . -}}
+{{- $ns := include "fleet-project.namespace" . -}}
+{{- range $svc, $cfg := .Values.daemons }}
+{{- $full := printf "%s-%s" $name $svc }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $full }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" $root | nindent 4 }}
+    app: {{ $full }}
+    component: daemon
+spec:
+  replicas: {{ $cfg.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ $full }}
+  template:
+    metadata:
+      labels:
+        {{- include "fleet-project.labels" $root | nindent 8 }}
+        app: {{ $full }}
+        component: daemon
+    spec:
+      {{- with $root.Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $svc }}
+          image: {{ include "fleet-project.image" (dict "root" $root "image" $cfg.image) }}
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          {{- with $cfg.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $cfg.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $cfg.service }}
+          ports:
+            {{- range .ports }}
+            - name: {{ .name }}
+              containerPort: {{ .port }}
+            {{- end }}
+          {{- end }}
+          env:
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $name }}-config
+                  key: redis_url
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet-project.secretName" $root }}
+                  key: redis_password
+            - name: POSTGRESQL_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet-project.secretName" $root }}
+                  key: postgresql_url
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            {{- with $cfg.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml ($cfg.resources | default dict) | nindent 12 }}
+{{- if $cfg.service }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $full }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" $root | nindent 4 }}
+    app: {{ $full }}
+spec:
+  selector:
+    app: {{ $full }}
+  ports:
+    {{- range $cfg.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .port }}
+    {{- end }}
+{{- end }}
+{{- end }}

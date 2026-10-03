@@ -1,0 +1,69 @@
+---
+# Default variables for install_fleet_platform role
+
+# Platform Services Configuration
+platform_services:
+  database: true
+  redis: true
+  backend: true
+  frontend: true
+  worker: false
+  scheduler: false
+  monitoring: false
+  nginx: false
+
+# DDatabase Configuration
+database_image: "postgres:5"
+database_name: "example"
+database_user: "example"
+database_password: "example"
+database_port: "5"
+database_memory: "G"
+
+# Redis Configuration
+redis_image: "redis:"
+redis_port: ""
+
+# AApplication Configuration
+fleet_backend_image: "{{ docker_registry }}/example/backend:latest"
+fleet_frontend_image: "{{ docker_registry }}/example/frontend:latest"
+backend_port: ""
+frontend_port: ""
+
+# Docker Registry
+docker_registry: ""
+docker_login_command: ""
+
+# Environment Variables
+backend_environment: {}
+frontend_environment: {}
+custom_environment: {}
+feature_flags: {}
+
+# Deployment Configuration
+deployment_name: "example-platform"
+deployment_env: "production"
+
+# Security
+secret_key: "changeme-in-production"
+allowed_hosts: "localhost,..."
+
+# Volumes and Storage
+backend_volumes: []
+
+# Worker Configuration
+worker_command: '["celery", "worker", "-", "app.celery", "--loglevel=info"]'
+scheduler_command: '["celery", "beat", "-", "app.celery", "--loglevel=info"]'
+
+# Monitoring
+flower_image: "mher/flower:.."
+flower_port: "5555"
+
+# Load alancer
+nginx_image: "nginx:alpine"
+nginx_port: ""
+nginx_ssl_port: ""
+ssl_certificates: false
+
+# Configuration iles
+platform_config_files: []

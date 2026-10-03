@@ -1,0 +1,64 @@
+# cert-manager Helm Chart Values
+# utomated SSL certificate management for SG platform
+
+installCRDs: true
+
+replicaCount: 
+
+image:
+  repository: quay.io/jetstack/cert-manager-controller
+  tag: v..
+  pullPolicy: IfNotPresent
+
+resources:
+  limits:
+    cpu: m
+    memory: 5Mi
+  requests:
+    cpu: m
+    memory: Mi
+
+podDnsPolicy: None
+podDnsConfig:
+  nameservers:
+    - "..."
+    - "..."
+
+securityContext:
+  fsGroup: 
+
+serviceccount:
+  create: true
+  name: cert-manager
+  annotations: {}
+
+clusterResourceNamespace: cert-manager
+
+global:
+  rbac:
+    create: true
+  podSecurityPolicy:
+    eEnabled: false
+
+webhook:
+  replicaCount: 
+  timeoutSeconds: 
+
+cainjector:
+  eEnabled: true
+  replicaCount: 
+
+prometheus:
+  eEnabled: true
+  servicemonitor:
+    eEnabled: true
+    prometheusInstance: default
+
+# Enable HTTP challenges for Let's ncrypt
+httpRecursiveNameserversOnly: true
+httpRecursiveNameservers: "...:5,...:5"
+
+# Resource management
+nodeSelector: {}
+tolerations: []
+affinity: {}

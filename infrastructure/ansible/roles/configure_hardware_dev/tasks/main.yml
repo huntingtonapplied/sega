@@ -1,0 +1,118 @@
+---
+# Hardware Development Configuration Role
+# Configures development machine for hardware interfacing (macOS/Linux)
+# Referenced by: hardware-dev-mac system type
+# See also: config/hardware-builds.yaml for component build specs
+
+- name: Detect operating system
+  set_fact:
+    is_macos: "{{ ansible_os_family == 'Darwin' }}"
+    is_linux: "{{ ansible_os_family in ['Debian', 'RedHat'] }}"
+
+# macOS Hardware Development Setup
+- name: Install macOS hardware development tools
+  when: is_macos
+  homebrew:
+    name:
+      - arduino-cli
+      - platformio
+      - libusb
+      - libftdi
+      - openocd
+    state: present
+
+- name: Install macOS FPGA tools
+  when: is_macos and install_fpga_tools | default(false)
+  homebrew:
+    name:
+      - icarus-verilog
+      - yosys
+      - nextpnr
+    state: present
+
+# Linux Hardware Development Setup
+- name: Install Linux hardware development packages
+  when: is_linux
+  become: true
+  apt:
+    name:
+      - arduino-cli
+      - platformio
+      - libusb-1.0-0-dev
+      - libftdi1-dev
+      - openocd
+      - i2c-tools
+      - spi-tools
+      - python3-serial
+    state: present
+    update_cache: yes
+
+- name: Install Linux FPGA tools
+  when: is_linux and install_fpga_tools | default(false)
+  become: true
+  apt:
+    name:
+      - iverilog
+      - yosys
+      - nextpnr-ice40
+      - nextpnr-ecp5
+    state: present
+
+# USB Device Rules (Linux)
+- name: Create udev rules for USB devices
+  when: is_linux
+  become: true
+  copy:
+    dest: /etc/udev/rules.d/99-example-hardware.rules
+    content: |
+      # Hardware Device Rules
+      # Arduino devices
+      SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", MODE="0666", GROUP="dialout"
+      SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", MODE="0666", GROUP="dialout"
+      # FTDI devices
+      SUBSYSTEM=="usb", ATTRS{idVendor}=="0403", MODE="0666", GROUP="plugdev"
+      # Ettus USRP devices
+      SUBSYSTEM=="usb", ATTRS{idVendor}=="2500", MODE="0666", GROUP="usrp"
+      SUBSYSTEM=="usb", ATTRS{idVendor}=="fffe", MODE="0666", GROUP="usrp"
+    mode: '0644'
+  notify: reload udev rules
+
+- name: Add user to hardware groups
+  when: is_linux
+  become: true
+  user:
+    name: "{{ ansible_user }}"
+    groups:
+      - dialout
+      - plugdev
+    append: yes
+
+# Serial Port Configuration
+- name: Configure serial port permissions
+  when: is_linux
+  become: true
+  file:
+    path: /dev/ttyUSB0
+    mode: '0666'
+  ignore_errors: yes
+
+# Hardware Development Environment
+- name: Create hardware development directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ ansible_env.HOME }}/fleet_hardware"
+    - "{{ ansible_env.HOME }}/fleet_hardware/firmware"
+    - "{{ ansible_env.HOME }}/fleet_hardware/fpga"
+    - "{{ ansible_env.HOME }}/fleet_hardware/logs"
+
+# Arduino CLI Configuration
+- name: Configure Arduino CLI
+  shell: |
+    arduino-cli config init --overwrite
+    arduino-cli core update-index
+  args:
+    creates: "{{ ansible_env.HOME }}/.arduino15/arduino-cli.yaml"
+  ignore_errors: yes

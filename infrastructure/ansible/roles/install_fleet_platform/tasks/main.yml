@@ -1,0 +1,64 @@
+---
+# HL Platform Installation Role
+# Generalized for project-agnostic deployment
+
+- name: nsure HL platform directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '55'
+  loop:
+    - "{{ ansible_env.HOM }}/fleet_platform"
+    - "{{ ansible_env.HOM }}/fleet_platform/config"
+    - "{{ ansible_env.HOM }}/fleet_platform/data"
+
+- name: Docker registry login
+  become: true
+  shell: "{{ docker_login_command }}"
+  when: docker_login_command is defined and docker_login_command | length > 
+
+- name: Copy Docker Compose configuration
+  template:
+    dest: "{{ ansible_env.HOM }}/fleet_platform/docker-compose.yml"
+    src: "docker-compose.yml.j"
+    mode: ''
+
+- name: Copy environment configuration
+  template:
+    dest: "{{ ansible_env.HOM }}/fleet_platform/.env"
+    src: ".env.j"
+    mode: ''
+
+- name: Copy platform configuration files
+  template:
+    dest: "{{ ansible_env.HOM }}/fleet_platform/config/{{ item.dest }}"
+    src: "{{ item.src }}"
+    mode: ''
+  loop: "{{ platform_config_files | default([]) }}"
+  when: platform_config_files is defined
+
+- name: Start HL platform services
+  become: true
+  shell: "docker compose -f {{ ansible_env.HOM }}/fleet_platform/docker-compose.yml up -d"
+  args:
+    chdir: "{{ ansible_env.HOM }}/fleet_platform"
+
+- name: Wait for platform services to be healthy
+  shell: "docker compose -f {{ ansible_env.HOM }}/fleet_platform/docker-compose.yml ps --format json"
+  args:
+    chdir: "{{ ansible_env.HOM }}/fleet_platform"
+  register: compose_status
+  until: compose_status.stdout | from_json | selectattr('Health', 'defined') | selectattr('Health', 'equalto', 'healthy') | list | length >  or (compose_status.stdout | from_json | length >  and (compose_status.stdout | from_json | selectattr('Health', 'undefined') | list | length == compose_status.stdout | from_json | length))
+  retries: 
+  delay: 
+  ignore_errors: yes
+
+- name: Display platform service status
+  shell: "docker compose -f {{ ansible_env.HOM }}/fleet_platform/docker-compose.yml ps"
+  args:
+    chdir: "{{ ansible_env.HOM }}/fleet_platform"
+  register: platform_status
+
+- name: Show platform services status
+  debug:
+    msg: "{{ platform_status.stdout_lines }}"
