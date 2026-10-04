@@ -1,0 +1,189 @@
+# Domain Registry Configuration (EXAMPLE TEMPLATE)
+# Maps projects to their production and internal dev domains.
+#
+# Copy this file to `domain_registry.yaml` and fill in your own values.
+#
+# DOMAIN PATTERNS:
+# - Landing:     {project}.{tld}           (e.g., service-a.example.com)
+# - Product App: app.{project}.{tld}       (e.g., app.service-a.example.com)
+# - API:         api.{project}.{tld}       (e.g., api.service-a.example.com)
+# - Internal:    staging.{production-domain}      (e.g., staging.service-a.example.com)
+
+version: "1.0.0"
+
+# Test configuration defaults
+defaults:
+  timeout_seconds: 30
+  retry_count: 3
+  retry_delay_seconds: 2
+  verify_ssl: true
+  follow_redirects: true
+
+# EC2 Instance Configuration
+# Replace the doc IPs (203.0.113.x, RFC 5737) with your own instance IPs
+# and point ssh_key at your own key file.
+instances:
+  prod-01:
+    ip: "203.0.113.11"
+    ssh_user: "ubuntu"
+    ssh_key: "~/.ssh/your-key.pem"
+    groups: [1, 4]
+    note: "Group 1 + Group 4 (example)"
+
+  prod-02:
+    ip: "203.0.113.12"
+    ssh_user: "ubuntu"
+    ssh_key: "~/.ssh/your-key.pem"
+    groups: [2]
+
+  prod-03:
+    ip: "203.0.113.13"
+    ssh_user: "ubuntu"
+    ssh_key: "~/.ssh/your-key.pem"
+    groups: [3]
+
+  prod-04:
+    ip: "203.0.113.11"  # Example - same as Instance 1
+    ssh_user: "ubuntu"
+    ssh_key: "~/.ssh/your-key.pem"
+    groups: [4]
+    note: "Group 4 - Example reusing Instance 1 IP"
+
+# Project Domain Configurations
+# Port formula: api=8000+id, frontend=3000+id, product_app=4000+id
+projects:
+  # =========================================================================
+  # Instance 1 (prod-01) - Group 1
+  # =========================================================================
+
+  service-a:
+    id: 1
+    instance: "prod-01"
+    group: 1
+    domains:
+      production: "service-a.example.com"
+      internal: "staging.service-a.example.com"
+    endpoints:
+      landing:
+        port: 3001
+        path: "/"
+        expected_status: [200]
+      product_app:
+        port: 4001
+        path: "/"
+        expected_status: [200, 302]
+      api:
+        port: 8001
+        path: "/health"
+        expected_status: [200]
+
+  service-b:
+    id: 2
+    instance: "prod-01"
+    group: 1
+    # Single-app project — landing only, no product_app.
+    domains:
+      production: "service-b.example.com"
+      internal: "staging.service-b.example.com"
+    endpoints:
+      landing:
+        port: 3002
+        path: "/"
+        expected_status: [200]
+      api:
+        port: 8002
+        path: "/health"
+        expected_status: [200]
+
+  # =========================================================================
+  # Instance 2 (prod-02) - Group 2
+  # =========================================================================
+
+  service-c:
+    id: 3
+    instance: "prod-02"
+    group: 2
+    domains:
+      production: "service-c.example.com"
+      internal: "staging.service-c.example.com"
+    endpoints:
+      landing:
+        port: 3003
+        path: "/"
+        expected_status: [200]
+      product_app:
+        port: 4003
+        path: "/"
+        expected_status: [200, 302]
+      api:
+        port: 8003
+        path: "/health"
+        expected_status: [200]
+        expected_json:
+          status: "healthy"
+
+  # =========================================================================
+  # Instance 3 (prod-03) - Group 3
+  # =========================================================================
+
+  service-d:
+    id: 4
+    instance: "prod-03"
+    group: 3
+    domains:
+      production: "service-d.example.com"
+      internal: "staging.service-d.example.com"
+    endpoints:
+      landing:
+        port: 3004
+        path: "/app"  # Example: app served under a basePath
+        expected_status: [200, 302, 307, 308]
+      api:
+        port: 8004
+        path: "/v1/health"  # Example: API exposes /v1/health
+        expected_status: [200]
+
+  # =========================================================================
+  # Cloudflare Tunnel host - example
+  # =========================================================================
+
+  service-e:
+    id: 5
+    instance: "tunnel-host"
+    group: null
+    domains:
+      production: "service-e.example.com"
+      internal: "staging.service-e.example.com"
+    endpoints:
+      landing:
+        port: 3005
+        path: "/"
+        expected_status: [200]
+      product_app:
+        port: 4005
+        path: "/"
+        expected_status: [200, 302]
+      api:
+        port: 8005
+        path: "/health"
+        expected_status: [200]
+      downloads:
+        port: 9005
+        path: "/"
+        expected_status: [200]
+
+  # =========================================================================
+  # Local Development Only - example
+  # =========================================================================
+
+  service-local:
+    id: 6
+    instance: "local"
+    domains:
+      production: null  # Internal only
+      internal: null
+    endpoints:
+      api:
+        port: 8006
+        path: "/health"
+        expected_status: [200]

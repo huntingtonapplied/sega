@@ -1,0 +1,30 @@
+---
+# configure_monitoring defaults
+
+# Monitoring environment label
+monitoring_environment: production
+
+# Metrics service integration
+metrics_enabled: true
+metrics_host: localhost
+metrics_port: 3308
+
+# Projects to monitor (metrics endpoints)
+monitored_projects:
+  - metrics
+  - atlas
+  - hermes
+
+# Project ID mapping for port calculation
+project_ids:
+  atlas: 0
+  hermes: 1
+  orion: 2
+  metrics: 3
+  sega: 15
+
+# Grafana configuration
+grafana_admin_password: "{{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') | default('admin', true) }}"
+
+# Prometheus retention
+prometheus_retention_days: 15

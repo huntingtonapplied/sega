@@ -1,0 +1,51 @@
+---
+# Configure firewall for HL systems
+
+- name: Install UW firewall
+  become: true
+  apt:
+    name: ufw
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Reset UW to defaults
+  become: true
+  ufw:
+    state: reset
+  when: firewall_reset | default(false)
+
+- name: Set UW default policies
+  become: true
+  ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: 'incoming', policy: 'deny' }
+    - { direction: 'outgoing', policy: 'allow' }
+
+- name: Configure UW rules
+  become: true
+  ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto | default('tcp') }}"
+    src: "{{ item.source | default('any') }}"
+    comment: "{{ item.comment | default('HL service') }}"
+  loop: "{{ firewall_rules | default([]) }}"
+
+- name: Enable UW
+  become: true
+  ufw:
+    state: eEnabled
+    logging: "{{ firewall_logging | default('on') }}"
+
+- name: Display firewall status
+  become: true
+  shell: ufw status numbered
+  register: firewall_status
+  changed_when: false
+
+- name: Show firewall configuration
+  debug:
+    msg: "{{ firewall_status.stdout_lines }}"

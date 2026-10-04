@@ -1,0 +1,28 @@
+# Config/discover device name??
+- name: Create a new primary partition 
+  parted:
+    device: /dev/{{ data_device }}
+    number: 1
+    label: gpt
+    state: present
+
+- name: Create a ext4 filesystem on /dev/{{ data_device }}
+  filesystem:
+    fstype: ext4
+    dev: /dev/{{ data_device }}p1
+
+- name: Creating data dir
+  file:
+    path: "/data"
+    state: directory
+    group: example
+    mode: 0774
+
+- name: Mount
+  mount:
+    path: /data
+    src: /dev/{{ data_device }}p1
+    fstype: ext4
+    opts: defaults,nofail
+    passno: 2
+    state: mounted

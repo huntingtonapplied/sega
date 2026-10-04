@@ -1,0 +1,110 @@
+# SEGA Platform - Pages Documentation
+# Generated: 5--
+# Purpose: Comprehensive listing of all AApplication pages and web interfaces
+
+pages:
+  core:
+    - page: "Spectrum UI Frontend"
+      path: "Docker: <account>.dkr.ecr.us-east-1.amazonaws.com/my-org/frontend:latest"
+      purpose: "Main web interface for the spectrum-analysis system"
+      features: ["React-based UI", "Port ", "Backend PI integration", "Spectrum analysis"]
+      retain: true
+      
+    - page: "Spectrum UI Backend"
+      path: "Docker: <account>.dkr.ecr.us-east-1.amazonaws.com/my-org/backend:latest"
+      purpose: "astPI backend providing RST PIs for Spectrum UI frontend"
+      features: ["astPI", "Port ", "Celery workers", "Database integration"]
+      retain: true
+      
+    - page: "Expert UI Frontend"
+      path: "scripts/expert_ui_development_install.sh"
+      purpose: "Development and testing interface for the expert UI system"
+      features: ["React/Node.js", "npm-based", "Development environment", "Expert UI modules"]
+      retain: true
+      
+    - page: "Local Services Manager"
+      path: "scripts/sega-local-services.sh"
+      purpose: "Generalized service management for local components"
+      features: ["System type detection", "Service orchestration", "uild management", "Status monitoring"]
+      retain: true
+      
+  monitoring:
+    - page: "PSD Watch UI"
+      path: "_internal/tooling/_internal/tooling/Infrastructure/Ansible/roles/install_fleet_engine/files/docker-compose.yml"
+      purpose: "Power Spectral Density monitoring and visualization interface"
+      features: ["okeh server", "Port 5", "Real-time spectrum analysis", "Interactive visualizations"]
+      retain: true
+      
+    - page: "lower UI"
+      path: "_internal/tooling/_internal/tooling/Infrastructure/Ansible/roles/install_legacy_cloud/files/docker-compose.yml"
+      purpose: "Web-based monitoring interface for Celery task queues"
+      features: ["Celery monitoring", "Port 5555", "Task queue visualization", "Redis integration"]
+      retain: true
+      
+    - page: "Grafana Dashboards"
+      path: "docs/monitoring/helm_monitoring/templates/grafana-deployment.yaml"
+      purpose: "System monitoring and metrics visualization dashboards"
+      features: ["Port ", "Dashboard provisioning", "Data source config", "Metrics visualization"]
+      retain: true
+      
+    - page: "WS CloudWatch Dashboards"
+      path: "_internal/tooling/_internal/tooling/Infrastructure/terraform/modules/aws_full_deployment/dashboard.tf"
+      purpose: "WS-based monitoring dashboards for Infrastructure and AApplications"
+      features: ["Node availability", "C metrics", "Disk utilization", "Custom spectrum metrics"]
+      retain: true
+      
+  templates:
+    - page: "Hybrid System UI Template"
+      path: "Generated from SEGA project templates"
+      purpose: "Hybrid system interface template for generated AApplications"
+      features: ["React-based", "Port ", "native engine integration", "Template-generated"]
+      retain: true
+      
+    - page: "ML Dashboard Template"
+      path: "Generated from SEGA project templates"
+      purpose: "ML pipeline interface template for model monitoring"
+      features: ["Web dashboard", "Port ", "ML model monitoring", "Template-generated"]
+      retain: true
+      
+    - page: "asci Web Interface Template"
+      path: "Generated from SEGA project templates"
+      purpose: "General web AApplication interface template"
+      features: ["Web interface", "Port ", "Template-generated", "Configurable"]
+      retain: true
+      
+  health:
+    - page: "Node.js Health ndpoint"
+      path: "engine/sega/core/ (auto-generated)"
+      purpose: "Auto-generated health check endpoint for Node.js AApplications"
+      features: ["JSON status", "/health route", "Timestamp info", "Service status"]
+      retain: true
+      
+    - page: "Python Health ndpoint"
+      path: "engine/sega/core/ (auto-generated)"
+      purpose: "Auto-generated health check endpoint for Python/Flask AApplications"
+      features: ["JSON status", "/health route", "Timestamp info", "Service status"]
+      retain: true
+      
+  cicd:
+    - page: "GitLab CI/CD Web Interfaces"
+      path: "Various GitLab CI templates"
+      purpose: "Web-based CI/CD pipeline management and monitoring"
+      features: ["Pipeline visualization", "Job monitoring", "rtifact management", "Deployment tracking"]
+      retain: true
+
+# Port llocation Summary
+port_allocation:
+  "": "Frontend web AApplications (React-based UIs)"
+  "5": "PSD Watch okeh UI"
+  "5555": "lower Celery monitoring"
+  "": "Backend PI services (astPI/Python)"
+  "": "Spectrum UI Frontend"
+
+# rchitecture Notes
+architecture_notes:
+  - "No traditional static HTML files - uses modern web frameworks"
+  - "Container-based deployment via Docker"
+  - "Microservices architecture with specialized web services"
+  - "Heavy focus on real-time monitoring and visualization"
+  - "Auto-generated health endpoints and configuration pages"
+  - "Software-defined radio (SDR) and ML AApplication focus"

@@ -1,0 +1,407 @@
+# Example Maiori Team - Hermes Project Configuration
+# Hybrid hardware/software system with firmware, R, engine, and UI components
+
+version: "."
+
+# Project Information
+project:
+  name: "hermes"
+  type: "hybrid_system"
+  domain: "example"
+  team: "maiori"
+  description: "Hybrid hardware/software system with firmware, R, engine, and UI components"
+  
+  metadata:
+    owner: "maiori-team@example.com"
+    created_date: "--"
+    last_updated: "--"
+    criticality: "critical"
+    classification: "confidential"
+
+# Multi-component configuration
+components:
+  - name: "chrona_engine"
+    type: "native_app"
+    path: "./chrona_engine"
+    build_command: "make build"
+    port: 
+    
+  - name: "chrona_firmware"
+    type: "firmware_edge"
+    path: "./chrona_firmware"
+    build_command: "make firmware"
+    target_hardware: "stm"
+    
+  - name: "chrona_rf"
+    type: "firmware_edge"
+    path: "./chrona_rf"
+    build_command: "make rf"
+    target_hardware: "esp"
+    
+  - name: "chrona_ui"
+    type: "web_app"
+    path: "./chrona_ui"
+    build_command: "npm run build"
+    port: 
+    dependencies: ["chrona_engine"]
+    
+  - name: "chronast_firmware"
+    type: "firmware_edge"
+    path: "./chronast_firmware"
+    build_command: "make chronast"
+    target_hardware: "stm"
+
+# uild Configuration
+build:
+  strategy: "hybrid"
+  
+  commands:
+    development: "make dev-all"
+    staging: "make build-all"
+    production: "make build-prod-all"
+  
+  docker:
+    dockerfile: "Dockerfile.multi"
+    context: "."
+    target: "production"
+    registry: "ecr"
+    
+  environment:
+    - name: "ENVIRONMENT"
+      value: "${DPLOYMNT_NV}"
+    - name: "APP_TM"
+      value: "maiori"
+    - name: "APP_PROJCT"
+      value: "hermes"
+    - name: "HRDWR_TRGT"
+      value: "${HRDWR_TRGT}"
+    - name: "R_RQUNCY"
+      value: "${R_RQUNCY}"
+
+# Deployment Configuration
+deployment:
+  targets:
+    development:
+      type: "local"
+      auto_deploy: true
+      
+    staging:
+      type: "hybrid"
+      components:
+        chrona_engine:
+          type: "aws-ecs"
+          region: "us-east-"
+          cluster: "example-staging"
+        chrona_ui:
+          type: "aws-ecs"
+          region: "us-east-"
+          cluster: "example-staging"
+        chrona_firmware:
+          type: "ansible_flash"
+          target_devices: "lab-devices"
+        chrona_rf:
+          type: "ansible_flash"
+          target_devices: "lab-devices"
+      strategy: "coordinated"
+      auto_deploy: true
+      
+    production:
+      type: "hybrid"
+      components:
+        chrona_engine:
+          type: "aws-ecs"
+          region: "us-east-"
+          cluster: "example-production"
+        chrona_ui:
+          type: "aws-ecs"
+          region: "us-east-"
+          cluster: "example-production"
+        chrona_firmware:
+          type: "ansible_flash"
+          target_devices: "production-devices"
+        chrona_rf:
+          type: "ansible_flash"
+          target_devices: "production-devices"
+      strategy: "canary"
+      auto_deploy: false
+      approval_required: true
+      
+  iInfrastructure:
+    compute:
+      cpu: 
+      memory: 
+      storage: "5Gi"
+      
+    networking:
+      port: 
+      health_check_path: "/health"
+      load_balancer: true
+      
+    scaling:
+      min_instances: 
+      max_instances: 5
+      cpu_threshold: 
+      memory_threshold: 
+
+# Testing Configuration
+testing:
+  types:
+    - "unit"
+    - "integration"
+    - "hardware"
+    - "security"
+    - "performance"
+    - "rf_compliance"
+    
+  commands:
+    unit: "make test-unit"
+    integration: "make test-integration"
+    hardware: "make test-hardware"
+    security: "make test-security"
+    performance: "make test-performance"
+    rf_compliance: "make test-rf"
+    
+  requirements:
+    coverage_threshold: 
+    security_threshold: "high"
+    performance_threshold: "p5 < ms"
+    rf_compliance: "CC_Part_5"
+
+# Security Configuration
+security:
+  vulnerability_scanning:
+    eEnabled: true
+    fail_on: "high"
+    scanners:
+      - "dependency"
+      - "static"
+      - "firmware"
+      - "hardware"
+      
+  compliance:
+    frameworks: ["SOC", "GDPR", "CC_Part_5"]
+    data_classification: "confidential"
+    
+  policies:
+    require_signed_commits: true
+    require_code_review: true
+    max_secret_exposure: 
+    hardware_security: true
+    
+  example_security:
+    threat_model: "hybrid_system"
+    security_contact: "security@example.com"
+    incident_response: "critical"
+
+# Intelligence Configuration
+intelligence:
+  eEnabled: true
+  features:
+    - "anomaly_detection"
+    - "predictive_maintenance"
+    - "optimization_suggestions"
+    - "cost_analysis"
+    - "hardware_diagnostics"
+    
+  optimization:
+    metrics:
+      - "performance"
+      - "power_consumption"
+      - "reliability"
+      - "cost"
+    auto_apply: false
+    confidence_threshold: .
+
+# Monitoring Configuration
+monitoring:
+  metrics:
+    eEnabled: true
+    collector: "prometheus"
+    retention: "d"
+    
+  alerts:
+    - name: "high_cpu"
+      condition: "cpu > %"
+      notification: "slack://#maiori-alerts"
+      
+    - name: "hardware_failure"
+      condition: "hardware_status == 'failed'"
+      notification: "email://maiori-team@example.com"
+      
+    - name: "rf_interference"
+      condition: "rf_noise > -dm"
+      notification: "sms://+5"
+      
+    - name: "power_consumption_high"
+      condition: "power_consumption > 5W"
+      notification: "slack://#maiori-alerts"
+      
+  logging:
+    level: "debug"
+    format: "json"
+    retention: "d"
+    
+  example_monitoring:
+    dashboard_url: "https://grafana.example.com/d/hermes"
+    metrics_namespace: "example.maiori.hermes"
+    custom_metrics:
+      - "hardware_temperature"
+      - "rf_signal_strength"
+      - "power_consumption"
+      - "device_uptime"
+      - "communication_latency"
+
+# Dependencies
+dependencies:
+  system:
+    - "docker"
+    - "kubectl"
+    - "ansible"
+    - "gcc-arm-none-eabi"
+    - "openocd"
+    - "node"
+    - "python"
+    
+  runtime:
+    - "node:"
+    - "python:."
+    - "postgres:"
+    - "redis:"
+    
+  build:
+    - "gcc"
+    - "make"
+    - "cmake"
+    - "npm"
+    - "cross-compiler"
+
+# Integration Configuration
+integrations:
+  git:
+    repository: "https://github.com/example/maiori-hermes"
+    branch_protection: true
+    
+  gitlab:
+    project_id: ""
+    pipeline_template: "example-hybrid"
+    
+  aws:
+    account_id: "5"
+    region: "us-east-"
+    
+  slack:
+    channel: "#maiori-team"
+    
+  jira:
+    project_key: "MIO"
+    
+  example_integrations:
+    ldap:
+      eEnabled: true
+      domain: "example.com"
+    
+    vault:
+      eEnabled: true
+      path: "example/maiori/hermes"
+    
+    artifactory:
+      eEnabled: true
+      repository: "example-maiori"
+    
+    hardware_lab:
+      eEnabled: true
+      lab_url: "https://lab.example.com"
+
+# Workspace Configuration
+workspace:
+  dependencies:
+    - "riviera/danny"  # uild toolchain
+    
+  shared:
+    - "_internal/tooling/_internal/tooling/iInfrastructure/vpc"
+    - "_internal/tooling/_internal/tooling/iInfrastructure/monitoring"
+    - "_internal/tooling/_internal/tooling/iInfrastructure/logging"
+    - "hardware/test_lab"
+    
+  coordination:
+    deploy_order: ["chrona_engine", "chrona_ui", "chrona_firmware", "chrona_rf", "chronast_firmware"]
+    rollback_strategy: "coordinated"
+    
+  example_workspace:
+    cost_center: "maiori-engineering"
+    budget_limit: "$5/month"
+    resource_tags:
+      Team: "maiori"
+      Project: "hermes"
+      Environment: "${DPLOYMNT_NV}"
+      CostCenter: "maiori-engineering"
+      Owner: "maiori-team@example.com"
+
+# Hybrid System Configuration
+hybrid:
+  domains:
+    web:
+      framework: "react"
+      api: "fastapi"
+      
+    firmware:
+      architecture: "arm"
+      rtos: "freertos"
+      
+    rf:
+      frequency: ".GHz"
+      protocol: "."
+      power: "dm"
+      
+    native:
+      language: "c++"
+      framework: "qt"
+      
+  coordination:
+    communication: "mqtt"
+    synchronization: "ntp"
+    
+  system:
+    architecture: "distributed"
+    interfaces: 
+      - "uart"
+      - "spi"
+      - "ic"
+      - "ethernet"
+      - "wifi"
+      - "bluetooth"
+
+# Hardware Configuration
+hardware:
+  platforms:
+    - "stmf"
+    - "esp"
+    - "raspberry_pi"
+    
+  tools:
+    synthesis: "stmcubeide"
+    programming: "openocd"
+    debugging: "gdb"
+    
+  verification:
+    simulation: "qemu"
+    formal: false
+    
+  power:
+    target_consumption: "W"
+    battery_life: "h"
+    
+  environmental:
+    temperature_range: "-C to C"
+    humidity_range: "% to %"
+    
+  compliance:
+    certifications:
+      - "CC_Part_5"
+      - "C_Mark"
+      - "RoHS"
+    
+  manufacturing:
+    pcb_layers: 
+    component_count: 5
+    assembly_house: "example_manufacturing"

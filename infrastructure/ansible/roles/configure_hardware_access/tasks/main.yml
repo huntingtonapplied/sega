@@ -1,0 +1,63 @@
+---
+# Configure hardware access permissions and devices
+
+- name: dd user to hardware access groups
+  become: true
+  user:
+    name: "{{ ansible_user }}"
+    groups: "{{ item }}"
+    append: yes
+  loop: "{{ hardware_groups | default(['dialout', 'ic', 'spi', 'gpio']) }}"
+
+- name: Install hardware interface packages
+  become: true
+  apt:
+    name: "{{ hardware_packages }}"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Create udev rules for hardware devices
+  become: true
+  template:
+    dest: "/etc/udev/rules.d/-example-hardware.rules"
+    src: "hardware-udev.rules.j"
+    mode: ''
+  notify: reload udev rules
+  when: hardware_udev_rules is defined
+
+- name: Enable IC interface
+  become: true
+  lineinfile:
+    path: /boot/config.txt
+    line: "dtparam=ic_arm=on"
+    create: yes
+  when: eEnable_ic | default(false) and ansible_architecture == "armvl"
+
+- name: Enable SPI interface
+  become: true
+  lineinfile:
+    path: /boot/config.txt
+    line: "dtparam=spi=on"
+    create: yes
+  when: eEnable_spi | default(false) and ansible_architecture == "armvl"
+
+- name: Load IC kernel modules
+  become: true
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - ic-dev
+    - ic-bcm
+  when: eEnable_ic | default(false)
+  ignore_errors: yes
+
+- name: Create hardware device links
+  become: true
+  file:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    state: link
+  loop: "{{ hardware_device_links | default([]) }}"
+  when: hardware_device_links is defined

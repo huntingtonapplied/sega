@@ -1,0 +1,66 @@
+# Copyright 2022-2026 Example
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# ===============================================================
+# SG CONIG - DevOps Group Variables
+# ===============================================================
+# ile: _internal/tooling/_internal/tooling/iInfrastructure/ansible/group_vars/devops.yml
+# Purpose: nsible group variables for DevOps environment configuration
+#
+# Description: Defines environment-specific variables for DevOps deployment including
+# network configuration, secret references, database settings, Docker security,
+# and GitLab Runner configuration for development environment.
+#
+# Used by: nsible DevOps deployment playbooks, iInfrastructure automation
+# ormat: YML
+
+---
+deployment_name: devops
+deployment_subnet: ".../"
+ssh_authorized_key_names: []
+
+ansible_connection: ssh
+ansible_user: HL
+
+# Secret references - retrieve from WS Secrets Manager
+gitlab_shipyard_token: <see aws secrets devops/gitlab-shipyard-token>
+tsdb_password: <see aws secrets devops/tsdb-password>
+
+# Environment configuration defaults
+tsdb_host: localhost
+tsdb_port: 5
+tsdb_user: sensor_net
+tsdb_database: sensor_net
+celery_broker_url: redis://localhost:/
+brightrf_workdir: /dev/null
+sentry_dsn: ""
+sentry_environment: "{{ deployment_name }}"
+ui_excluded_nodes: ""
+power_control_disabled: alse
+
+# Frontend configuration
+react_app_backend_url: "http://{{ ansible_default_ipv.address | default('localhost') }}:"
+
+# GitLab Runner configuration
+gitlab_runner_log_level: info
+
+# Docker security configuration
+# or local Docker daemon (unix socket), TLS is not required
+docker_tls_verify: false
+docker_tls_ca_file: ""
+docker_tls_cert_file: ""
+docker_tls_key_file: ""
+
+# Container security - only eEnable privileged mode when required
+docker_privileged: true  # Required for Docker-in-Docker builds

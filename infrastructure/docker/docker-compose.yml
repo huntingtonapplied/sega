@@ -1,0 +1,171 @@
+# Docker Compose for SEGA Development Environment
+# PostgreSQL for development database, Redis for caching
+# Port Standards: see docs/standards/infrastructure/PORT_ALLOCATION_STANDARDS.md
+
+services:
+  # SEGA API Service
+  sega:
+    build:
+      context: ../../..
+      dockerfile: sega/infrastructure/docker/Dockerfile
+    image: sega-api:latest
+    container_name: sega-api
+    ports:
+      - "${SEGA_PORT:-8015}:8000"  # SEGA API port per port allocation standards
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://sega:sega_secure_dev_pass_2025@postgres:5432/sega_dev
+      - REDIS_URL=redis://redis:6379/0
+      - ENV=${ENV:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sega-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: sega-postgres
+    # user: "${APP_UID:-1005}:${APP_GID:-1005}"  # Commented out: causes permission issues with volumes
+    environment:
+      POSTGRES_DB: sega_dev
+      POSTGRES_USER: sega
+      POSTGRES_PASSWORD: sega_secure_dev_pass_2025
+    ports:
+      - "5015:5432"  # SEGA DB port per port allocation standards
+    volumes:
+      - sega_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sega -d sega_dev"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sega-dev
+
+  redis:
+    image: redis:7-alpine
+    container_name: sega-redis
+    # user: "${APP_UID:-1005}:${APP_GID:-1005}"  # Commented out: causes permission issues with volumes
+    ports:
+      - "6015:6379"  # SEGA Redis port per port allocation standards
+    volumes:
+      - sega_redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+    networks:
+      - sega-dev
+
+  # SEGA Dash Configuration Dashboard
+  dashboard:
+    build:
+      context: ../../..
+      dockerfile: sega/infrastructure/docker/Dockerfile
+    image: sega-dashboard:latest
+    container_name: sega-dashboard
+    command: ["python", "-c", "from sega.core.config.dashboard import run_dashboard; run_dashboard(host='0.0.0.0', port=3000, config_path='/app/projects.json')"]
+    ports:
+      - "${SEGA_DASHBOARD_PORT:-3015}:3000"  # SEGA frontend port per port allocation standards
+    environment:
+      - ENV=${ENV:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Action layer: where per-project compose files live (host path, mounted below)
+      - SEGA_FLEET_ROOT=${SEGA_FLEET_ROOT:-${HOME}/workspace}
+      # Lets the `sega` CLI fallback import inside the container (module-level config load)
+      - SEGA_CONFIG_PATH=${SEGA_CONFIG_PATH:-${HOME}/workspace/sega/config/sega.toml}
+      # Systems strip: dedicated monitoring key for SSH host metrics (mounted below)
+      - SEGA_SYSMON_SSH_KEY=/app/secrets/sysmon_ssh_key
+    volumes:
+      - ${SEGA_PROJECTS_JSON:-${HOME}/workspace/config/projects.json}:/app/projects.json:ro
+      # Domain registry: the collector builds per-project HTTP URLs (landing/product/api)
+      # from this. Not baked into the image (Dockerfile copies only engine/sega/), so
+      # mount it where _load_registry looks: <app>/config/domain_registry.yaml.
+      - ${HOME}/workspace/sega/config/domain_registry.yaml:/app/config/domain_registry.yaml:ro
+      # Systems strip (host metrics for monitored hosts): host list + the
+      # dedicated read-only monitoring key. The collector stages the key to a
+      # private 0600 tempfile, so mount ownership/permissions don't matter.
+      - ${HOME}/workspace/sega/config/system_monitors.yaml:/app/config/system_monitors.yaml:ro
+      - ${HOME}/.sega/dashboard-ssh/sysmon_key:/app/secrets/sysmon_ssh_key:ro
+      # Live container status: mount the Docker socket so the collector can `docker ps`.
+      # This container runs INSIDE the Colima VM, so the source is the VM's own
+      # /var/run/docker.sock — the stable, in-VM daemon socket. Do NOT point this at
+      # the host's ~/.colima/.../docker.sock: that host forward flaps under Colima's
+      # single-SSH-mux port-forwarding load (see the live-status plan notes).
+      # NOTE: socket access = full Docker API (a ':ro' mount does NOT make it
+      # read-only — the API writes requests over the socket). For true read-only,
+      # front it with a docker-socket-proxy. Keep the dashboard non-public.
+      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock
+      # Project compose files, mounted at the SAME host path so the paths recorded in
+      # container labels (com.docker.compose.project.config_files) resolve inside the
+      # container — required for the action layer's `docker compose -f ...` commands.
+      - ${SEGA_FLEET_ROOT:-${HOME}/workspace}:${SEGA_FLEET_ROOT:-${HOME}/workspace}:ro
+    # Remote-operations token (SEGA_DASHBOARD_TOKEN) lives OUTSIDE the repo — .env
+    # files are git-tracked here. Missing file = remote operations stay disabled.
+    env_file:
+      - path: ${HOME}/.sega/dashboard.env
+        required: false
+    # The non-root 'sega' user must be in the socket's group to read it. 991 is the
+    # docker group gid inside the Colima VM (override with DOCKER_GID on other hosts).
+    group_add:
+      - "${DOCKER_GID:-991}"
+    networks:
+      - sega-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/config/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Optional: Admin tools for development
+  adminer:
+    image: adminer:latest
+    container_name: sega-adminer
+    user: "${APP_UID:-1005}:${APP_GID:-1005}"
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    networks:
+      - sega-dev
+    profiles:
+      - admin
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: sega-redis-commander
+    user: "${APP_UID:-1005}:${APP_GID:-1005}"
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    depends_on:
+      - redis
+    networks:
+      - sega-dev
+    profiles:
+      - admin
+
+volumes:
+  sega_postgres_data:
+  sega_redis_data:
+
+networks:
+  sega-dev:
+    driver: bridge

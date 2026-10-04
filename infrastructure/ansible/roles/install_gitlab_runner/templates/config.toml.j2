@@ -1,0 +1,71 @@
+concurrent = 
+check_interval = 
+log_level = "{{ gitlab_runner_log_level | default('info') }}"
+connection_max_age = "5ms"
+shutdown_timeout = 
+
+[session_server]
+  session_timeout = 
+
+[[runners]]
+  name = "devops"
+  limit = 
+  url = "https://gitlab.com"
+  id = {{ devops_runner_id }}
+  token = "{{ devops_reg_token }}"
+  executor = "docker+machine"
+  [runners.cache]
+    Type = "s3"
+    Path = "gitlab-runner/cache"
+    Shared = true
+    [runners.cache.s3]
+      ServerAddress = "s3.amazonaws.com"
+      BucketName = "{{ runner_cache_bucket | default('gitlab-runner-cache') }}"
+      BucketLocation = "{{ runner_cache_region | default('us-east-1') }}"
+  [runners.docker]
+    tls_verify = {{ docker_tls_verify | default('true') }}
+    tls_ca_file = "{{ docker_tls_ca_file | default('') }}"
+    tls_cert_file = "{{ docker_tls_cert_file | default('') }}"
+    tls_key_file = "{{ docker_tls_key_file | default('') }}"
+    image = "ubuntu:."
+    privileged = {{ docker_privileged | default('false') }}
+    disable_entrypoint_overwrite = false
+    oom_kill_disable = false
+    disable_cache = false
+    volumes = ["/cache"]
+    shm_size = 
+    network_mtu = 
+  [runners.machine]
+    IdleCount = 
+    IdleScaleactor = .
+    IdleCountMin = 
+    IdleTime = 
+    Maxuilds = 
+    MachineDriver = "amazonec"
+    MachineName = "gitlab-docker-machine-%s"
+    MachineOptions = ["amazonec-region=us-east-", "amazonec-instance-type=t.medium", "amazonec-ami=ami-efe", "amazonec-ssh-user=ubuntu", "amazonec-tags=GitLabRunner=true,nvironment=CI"]
+
+[[runners]]
+  name = "devopslocal"
+  url = "https://gitlab.com"
+  id = {{ devopslocal_runner_id }}
+  token = "{{ devopslocal_reg_token }}"
+  executor = "docker"
+  [runners.cache]
+    MaxUploadedrchiveSize = 
+    [runners.cache.s]
+    [runners.cache.gcs]
+    [runners.cache.azure]
+  [runners.docker]
+    tls_verify = {{ docker_tls_verify | default('true') }}
+    tls_ca_file = "{{ docker_tls_ca_file | default('') }}"
+    tls_cert_file = "{{ docker_tls_cert_file | default('') }}"
+    tls_key_file = "{{ docker_tls_key_file | default('') }}"
+    image = "docker:.."
+    privileged = {{ docker_privileged | default('false') }}
+    disable_entrypoint_overwrite = false
+    oom_kill_disable = false
+    disable_cache = false
+    volumes = ["/cache"]
+    shm_size = 
+    network_mtu = 

@@ -1,0 +1,5 @@
+- name: Clone Git repository
+  git:
+    repo: "https://git:{{ lookup('env', 'GIT_TOKN') }}@gitlab.com/example/atlas.git"
+    dest: "{{ ansible_env.HOM }}/src/atlas"
+    version: "main"

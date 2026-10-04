@@ -1,0 +1,804 @@
+# ================================
+# PROJECT TECHNOLOGY STACK
+# Project: SEGA - the fleet CLI for a whole portfolio of services
+# File: docs/tech_stack.yaml
+# Purpose: Complete technology stack documentation
+# ================================
+
+project:
+  name: "SEGA"
+  description: "The fleet CLI: one command grammar for your whole portfolio of services"
+  tech_approach: "Cloud-native platform with microservices architecture and extensive tool integrations"
+
+# Programming Languages
+programming_languages:
+
+  primary:
+    python:
+      version: "3.11+"
+      purpose: "Backend services, CLI, automation scripts"
+      frameworks:
+        - "FastAPI (REST API development)"
+        - "Click (CLI interface)"
+        - "Pydantic (data validation)"
+        - "SQLAlchemy (ORM)"
+        - "Celery (task queuing)"
+      testing:
+        - "pytest (unit and integration testing)"
+        - "pytest-cov (code coverage)"
+        - "pytest-asyncio (async testing)"
+      code_quality:
+
+## Python Logging Standardization Required (5--)
+#   CRITICAL: All Python codebases in the portfolio must implement standardized logging.
+  
+#   Required Implementation:
+#     dependencies:
+#       - "colorlog>=.. (for colored terminal output)"
+#       - "structlog>=.. (for structured logging)" 
+    
+#     logging_setup:
+#       - "Configure root logger with colored output for development"
+#       - "Use structured logging with JSON output for production"
+#       - "Implement all standard log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL"
+#       - "Include contextual information: request_id, user_id, component"
+#       - "Rotate log files to prevent disk space issues"
+    
+#     implementation_locations:
+#       - "main.py: Configure root logger for CLI operations"
+#       - "fleet_install: Add logging to installation system"
+#       - "backend/: Configure deployment and CI/CD logging"
+#       - "scripts/: Ensure all automation scripts use proper logging"
+    
+#     log_format_standard:
+#       development: "[%(log_color)s%(levelname)-s%(reset)s] %(asctime)s - %(name)s - %(message)s"
+#       production: "JSON structured with timestamp, level, component, message, context"
+    
+#     required_log_calls:
+#       - "logger.debug() for detailed deployment diagnostics"
+#       - "logger.info() for installation progress and system operations"
+#       - "logger.warning() for configuration issues and deprecated features"
+#       - "logger.error() for deployment failures and system errors"
+#       - "logger.critical() for infrastructure failures and security breaches"
+    
+#     infrastructure_platform_logging:
+#       - "Log all deployment operations with timing and success status"
+#       - "Log system configuration changes and infrastructure updates"
+#       - "Log CI/CD pipeline executions and results"
+#       - "Log security scanning results and compliance checks"
+#       - "Include deployment context for troubleshooting"
+    
+#     verification_checklist:
+#       - "[ ] No print() statements remain in production code"
+#       - "[ ] All exceptions logged with logger.error() or logger.exception()"
+#       - "[ ] Deployment operations logged with full context"
+#       - "[ ] Infrastructure changes auditable through logs"
+#       - "[ ] Log rotation configured to prevent disk space issues"
+#       - "[ ] Sensitive configuration data never logged"
+  
+#   Status: REQUIRES_IMPLEMENTATION
+#   Priority: CRITICAL - Infrastructure platform requires comprehensive logging
+        - "black (code formatting)"
+        - "ruff (linting)"
+        - "mypy (type checking)"
+        - "bandit (security analysis)"
+        
+    typescript:
+      version: "5.0+"
+      purpose: "Frontend web application, type-safe JavaScript"
+      frameworks:
+        - "React 18+ (UI framework)"
+        - "Next.js (full-stack framework)"
+        - "Material-UI (design system)"
+        - "React Query (data fetching)"
+      testing:
+        - "Jest (unit testing)"
+        - "React Testing Library (component testing)"
+        - "Playwright (E2E testing)"
+      tooling:
+        - "ESLint (linting)"
+        - "Prettier (code formatting)"
+        - "TypeScript (type checking)"
+        
+  secondary:
+    go:
+      version: "1.21+"
+      purpose: "High-performance microservices, CLI tools"
+      use_cases:
+        - "Performance-critical deployment agents"
+        - "System-level integrations"
+        - "Cross-platform CLI utilities"
+      frameworks:
+        - "Gin (web framework)"
+        - "Cobra (CLI framework)"
+        - "GORM (ORM)"
+        
+    bash:
+      purpose: "System automation, deployment scripts"
+      use_cases:
+        - "Infrastructure provisioning scripts"
+        - "CI/CD pipeline scripts"
+        - "System configuration automation"
+        
+    hcl:
+      purpose: "Infrastructure as Code with Terraform"
+      use_cases:
+        - "Cloud infrastructure definitions"
+        - "Multi-cloud resource management"
+        - "Environment provisioning"
+        
+    yaml:
+      purpose: "Configuration files, CI/CD pipelines"
+      use_cases:
+        - "Kubernetes manifests"
+        - "CI/CD pipeline definitions"
+        - "Application configuration"
+        - "Docker Compose files"
+
+# Backend Technology Stack
+backend_stack:
+
+  web_framework:
+    fastapi:
+      version: "0.104+"
+      purpose: "REST API development with automatic documentation"
+      features:
+        - "Automatic OpenAPI/Swagger documentation"
+        - "Built-in request/response validation"
+        - "Async/await support"
+        - "Dependency injection system"
+      integrations:
+        - "Pydantic for data models"
+        - "SQLAlchemy for database ORM"
+        - "OAuth2 for authentication"
+        
+  cli_framework:
+    click:
+      version: "8.1+"
+      purpose: "Command-line interface development"
+      features:
+        - "Command grouping and nesting"
+        - "Parameter validation"
+        - "Progress bars and styling"
+        - "Shell completion"
+        
+  task_processing:
+    celery:
+      version: "5.3+"
+      purpose: "Asynchronous task processing"
+      broker: "Redis"
+      use_cases:
+        - "Long-running deployment tasks"
+        - "Background security scanning"
+        - "Periodic portfolio synchronization"
+        - "Report generation"
+        
+  data_processing:
+    pandas:
+      version: "2.1+"
+      purpose: "Data analysis and metrics processing"
+      use_cases:
+        - "Deployment metrics analysis"
+        - "Performance data processing"
+        - "Cost optimization calculations"
+        
+    scikit_learn:
+      version: "1.3+"
+      purpose: "Machine learning for optimization"
+      use_cases:
+        - "Deployment success prediction"
+        - "Resource usage optimization"
+        - "Anomaly detection"
+
+# Frontend Technology Stack
+frontend_stack:
+
+  framework:
+    react:
+      version: "18.2+"
+      purpose: "User interface development"
+      features:
+        - "Component-based architecture"
+        - "Server-side rendering with Next.js"
+        - "State management with Context API"
+        - "Real-time updates with WebSockets"
+        
+    nextjs:
+      version: "14.0+"
+      purpose: "Full-stack React framework"
+      features:
+        - "API routes for backend integration"
+        - "Static site generation"
+        - "Image optimization"
+        - "Built-in CSS support"
+        
+  ui_components:
+    material_ui:
+      version: "5.14+"
+      purpose: "Design system and component library"
+      features:
+        - "Comprehensive component set"
+        - "Theming and customization"
+        - "Accessibility compliance"
+        - "Responsive design"
+        
+  data_fetching:
+    react_query:
+      version: "4.0+"
+      purpose: "Server state management and caching"
+      features:
+        - "Automatic caching and invalidation"
+        - "Background refetching"
+        - "Optimistic updates"
+        - "Real-time synchronization"
+        
+  visualization:
+    recharts:
+      version: "2.8+"
+      purpose: "Data visualization and charts"
+      use_cases:
+        - "Deployment metrics dashboards"
+        - "Portfolio overview charts"
+        - "Performance trend visualization"
+        
+    d3:
+      version: "7.8+"
+      purpose: "Advanced data visualization"
+      use_cases:
+        - "Complex network diagrams"
+        - "Interactive deployment flows"
+        - "Custom chart components"
+
+# Database Technology Stack
+database_stack:
+
+  primary_database:
+    postgresql:
+      version: "15.4+"
+      purpose: "Primary relational database"
+      features:
+        - "ACID compliance"
+        - "JSON/JSONB support for flexible schemas"
+        - "Full-text search capabilities"
+        - "Advanced indexing"
+      use_cases:
+        - "Project metadata storage"
+        - "User and team management"
+        - "Configuration storage"
+        - "Audit logs"
+      deployment:
+        - "Amazon RDS for managed hosting"
+        - "Read replicas for scalability"
+        - "Automated backups and point-in-time recovery"
+        
+  cache_store:
+    redis:
+      version: "7.0+"
+      purpose: "Caching and session storage"
+      features:
+        - "In-memory data structure store"
+        - "Pub/Sub messaging"
+        - "Lua scripting support"
+        - "Cluster mode for high availability"
+      use_cases:
+        - "API response caching"
+        - "Session management"
+        - "Celery message broker"
+        - "Real-time notifications"
+        
+  time_series:
+    influxdb:
+      version: "2.7+"
+      purpose: "Time-series metrics storage"
+      features:
+        - "High-performance time-series data"
+        - "Built-in downsampling"
+        - "Flux query language"
+        - "Retention policies"
+      use_cases:
+        - "Deployment metrics"
+        - "Performance monitoring"
+        - "Resource utilization tracking"
+        - "Cost analysis data"
+        
+  search_engine:
+    elasticsearch:
+      version: "8.10+"
+      purpose: "Full-text search and log analysis"
+      features:
+        - "Distributed search and analytics"
+        - "Real-time indexing"
+        - "Aggregations and analytics"
+        - "Machine learning features"
+      use_cases:
+        - "Log search and analysis"
+        - "Configuration search"
+        - "Audit trail queries"
+        - "Security event analysis"
+
+# Infrastructure and DevOps Stack
+infrastructure_stack:
+
+  containerization:
+    docker:
+      version: "24.0+"
+      purpose: "Application containerization"
+      features:
+        - "Multi-stage builds for optimization"
+        - "BuildKit for improved performance"
+        - "Security scanning integration"
+        - "Multi-platform builds"
+      best_practices:
+        - "Distroless base images"
+        - "Non-root user execution"
+        - "Minimal layer count"
+        - "Security vulnerability scanning"
+        
+  orchestration:
+    kubernetes:
+      version: "1.28+"
+      purpose: "Container orchestration and management"
+      features:
+        - "Automatic scaling and healing"
+        - "Service discovery and load balancing"
+        - "Rolling updates and rollbacks"
+        - "Resource management and quotas"
+      deployment:
+        - "Amazon EKS for managed clusters"
+        - "Helm for package management"
+        - "Istio for service mesh"
+        - "ArgoCD for GitOps"
+        
+    helm:
+      version: "3.13+"
+      purpose: "Kubernetes package management"
+      features:
+        - "Templating and parameterization"
+        - "Release management"
+        - "Dependency management"
+        - "Hooks for custom logic"
+        
+  infrastructure_as_code:
+    terraform:
+      version: "1.6+"
+      purpose: "Infrastructure provisioning"
+      features:
+        - "Multi-cloud support"
+        - "State management"
+        - "Plan and apply workflow"
+        - "Module system"
+      providers:
+        - "AWS for Amazon Web Services"
+        - "Azure for Microsoft Azure"
+        - "Google Cloud for GCP"
+        - "Kubernetes for cluster resources"
+        
+    ansible:
+      version: "8.0+"
+      purpose: "Configuration management"
+      features:
+        - "Agentless architecture"
+        - "Idempotent operations"
+        - "Rich module library"
+        - "Playbook organization"
+      use_cases:
+        - "Server configuration"
+        - "Application deployment"
+        - "Security hardening"
+        - "Compliance automation"
+
+# Cloud Platform Integration
+cloud_platforms:
+
+  aws:
+    purpose: "Primary cloud platform"
+    services:
+      compute:
+        - "ECS (Elastic Container Service)"
+        - "EKS (Elastic Kubernetes Service)"
+        - "Lambda (serverless functions)"
+        - "EC2 (virtual machines)"
+      storage:
+        - "S3 (object storage)"
+        - "EBS (block storage)"
+        - "EFS (file storage)"
+      database:
+        - "RDS (managed databases)"
+        - "ElastiCache (managed Redis)"
+        - "DynamoDB (NoSQL)"
+      networking:
+        - "VPC (virtual private cloud)"
+        - "ALB/NLB (load balancers)"
+        - "CloudFront (CDN)"
+      security:
+        - "IAM (identity and access management)"
+        - "Secrets Manager"
+        - "KMS (key management)"
+        - "GuardDuty (threat detection)"
+        
+  azure:
+    purpose: "Secondary cloud platform"
+    services:
+      compute:
+        - "AKS (Azure Kubernetes Service)"
+        - "Container Instances"
+        - "Azure Functions"
+      storage:
+        - "Blob Storage"
+        - "Azure Files"
+      database:
+        - "Azure Database for PostgreSQL"
+        - "Azure Cache for Redis"
+      security:
+        - "Azure Active Directory"
+        - "Key Vault"
+        
+  gcp:
+    purpose: "Tertiary cloud platform"
+    services:
+      compute:
+        - "GKE (Google Kubernetes Engine)"
+        - "Cloud Run"
+        - "Cloud Functions"
+      storage:
+        - "Cloud Storage"
+        - "Cloud SQL"
+      security:
+        - "Cloud IAM"
+        - "Secret Manager"
+
+# Monitoring and Observability Stack
+monitoring_stack:
+
+  metrics:
+    prometheus:
+      version: "2.47+"
+      purpose: "Metrics collection and alerting"
+      features:
+        - "Time-series database"
+        - "PromQL query language"
+        - "Service discovery"
+        - "Alerting rules"
+      exporters:
+        - "Node Exporter (system metrics)"
+        - "Blackbox Exporter (endpoint monitoring)"
+        - "Custom application metrics"
+        
+    grafana:
+      version: "10.1+"
+      purpose: "Metrics visualization and dashboards"
+      features:
+        - "Rich visualization options"
+        - "Dashboard templating"
+        - "Alert management"
+        - "Plugin ecosystem"
+        
+  logging:
+    loki:
+      version: "2.9+"
+      purpose: "Log aggregation and querying"
+      features:
+        - "Label-based log queries"
+        - "Integration with Grafana"
+        - "Cost-effective storage"
+        - "Stream processing"
+        
+    promtail:
+      version: "2.9+"
+      purpose: "Log collection agent"
+      features:
+        - "Log parsing and labeling"
+        - "Service discovery"
+        - "Push to Loki"
+        
+  tracing:
+    jaeger:
+      version: "1.49+"
+      purpose: "Distributed tracing"
+      features:
+        - "Request flow visualization"
+        - "Performance analysis"
+        - "Service dependency mapping"
+        - "Anomaly detection"
+        
+  apm:
+    sentry:
+      version: "Latest"
+      purpose: "Application performance monitoring"
+      features:
+        - "Error tracking and alerting"
+        - "Performance monitoring"
+        - "Release tracking"
+        - "User impact analysis"
+
+# Security Tools and Frameworks
+security_stack:
+
+  static_analysis:
+    sonarqube:
+      version: "9.9+"
+      purpose: "Code quality and security analysis"
+      features:
+        - "Security vulnerability detection"
+        - "Code smell identification"
+        - "Technical debt tracking"
+        - "Quality gates"
+        
+    bandit:
+      version: "1.7+"
+      purpose: "Python security linting"
+      features:
+        - "Common security issue detection"
+        - "Configurable security tests"
+        - "CI/CD integration"
+        
+  dependency_scanning:
+    safety:
+      version: "2.3+"
+      purpose: "Python dependency vulnerability scanning"
+      features:
+        - "Known vulnerability database"
+        - "License checking"
+        - "CI/CD integration"
+        
+    snyk:
+      version: "Latest"
+      purpose: "Multi-language dependency scanning"
+      features:
+        - "Vulnerability monitoring"
+        - "Automated fixes"
+        - "License compliance"
+        - "Container scanning"
+        
+  container_security:
+    trivy:
+      version: "0.46+"
+      purpose: "Container vulnerability scanning"
+      features:
+        - "OS package vulnerabilities"
+        - "Application dependency scanning"
+        - "Configuration issues"
+        - "Secret detection"
+        
+    cosign:
+      version: "2.2+"
+      purpose: "Container image signing"
+      features:
+        - "Keyless signing"
+        - "Policy enforcement"
+        - "Supply chain security"
+        
+  secrets_management:
+    hashicorp_vault:
+      version: "1.15+"
+      purpose: "Secrets management and encryption"
+      features:
+        - "Dynamic secrets"
+        - "Encryption as a service"
+        - "Identity-based access"
+        - "Audit logging"
+
+# CI/CD and Automation Tools
+cicd_stack:
+
+  pipeline_platforms:
+    gitlab_ci:
+      purpose: "Primary CI/CD platform"
+      features:
+        - "YAML-based pipeline definition"
+        - "Docker executor support"
+        - "Parallel job execution"
+        - "Environment deployments"
+        
+    github_actions:
+      purpose: "GitHub-based CI/CD"
+      features:
+        - "Workflow automation"
+        - "Matrix builds"
+        - "Reusable workflows"
+        - "Marketplace actions"
+        
+    jenkins:
+      version: "2.426+"
+      purpose: "Self-hosted CI/CD automation"
+      features:
+        - "Pipeline as code"
+        - "Plugin ecosystem"
+        - "Distributed builds"
+        - "Blue Ocean interface"
+        
+  gitops:
+    argocd:
+      version: "2.8+"
+      purpose: "GitOps continuous deployment"
+      features:
+        - "Git-based deployment"
+        - "Application health monitoring"
+        - "Rollback capabilities"
+        - "Multi-cluster support"
+        
+  artifact_management:
+    harbor:
+      version: "2.9+"
+      purpose: "Container registry with security"
+      features:
+        - "Vulnerability scanning"
+        - "Image signing"
+        - "RBAC and quotas"
+        - "Replication"
+
+# Development Tools and Environment
+development_stack:
+
+  package_management:
+    poetry:
+      version: "1.6+"
+      purpose: "Python dependency management"
+      features:
+        - "Lock file for reproducible builds"
+        - "Virtual environment management"
+        - "Build and publish tools"
+        - "Dependency resolution"
+        
+    npm:
+      version: "10.0+"
+      purpose: "Node.js package management"
+      features:
+        - "Package lock for consistency"
+        - "Script running"
+        - "Workspace support"
+        
+  code_quality:
+    pre_commit:
+      version: "3.5+"
+      purpose: "Git hook framework"
+      hooks:
+        - "Black code formatting"
+        - "Ruff linting"
+        - "MyPy type checking"
+        - "Security scanning"
+        
+  testing:
+    pytest:
+      version: "7.4+"
+      purpose: "Python testing framework"
+      plugins:
+        - "pytest-cov (coverage)"
+        - "pytest-asyncio (async testing)"
+        - "pytest-mock (mocking)"
+        - "pytest-xdist (parallel testing)"
+        
+    playwright:
+      version: "1.39+"
+      purpose: "End-to-end testing"
+      features:
+        - "Cross-browser testing"
+        - "Auto-waiting for elements"
+        - "Network interception"
+        - "Visual comparisons"
+
+# Integration and API Tools
+integration_stack:
+
+  api_tools:
+    requests:
+      version: "2.31+"
+      purpose: "HTTP client library"
+      features:
+        - "Session management"
+        - "Authentication support"
+        - "SSL verification"
+        - "Request/response hooks"
+        
+    httpx:
+      version: "0.25+"
+      purpose: "Async HTTP client"
+      features:
+        - "Async/await support"
+        - "HTTP/2 support"
+        - "Connection pooling"
+        - "Streaming support"
+        
+  data_serialization:
+    pydantic:
+      version: "2.4+"
+      purpose: "Data validation and serialization"
+      features:
+        - "Type hints validation"
+        - "JSON schema generation"
+        - "Custom validators"
+        - "Performance optimization"
+        
+  communication:
+    websockets:
+      version: "11.0+"
+      purpose: "Real-time communication"
+      use_cases:
+        - "Live deployment status"
+        - "Real-time notifications"
+        - "Collaborative features"
+        
+# Performance and Optimization
+performance_stack:
+
+  caching:
+    redis_cluster:
+      purpose: "Distributed caching"
+      features:
+        - "Automatic sharding"
+        - "High availability"
+        - "Linear scalability"
+        
+  async_processing:
+    asyncio:
+      purpose: "Asynchronous programming"
+      use_cases:
+        - "Concurrent deployment operations"
+        - "Parallel API calls"
+        - "Non-blocking I/O operations"
+        
+    aiofiles:
+      version: "23.2+"
+      purpose: "Asynchronous file operations"
+      use_cases:
+        - "Large file processing"
+        - "Configuration file handling"
+        - "Log file analysis"
+
+# Technology Decision Rationale
+technology_decisions:
+
+  python_choice:
+    rationale: "Excellent ecosystem for DevOps tools, strong library support, readable code"
+    alternatives_considered: ["Go", "Java", "Node.js"]
+    
+  fastapi_choice:
+    rationale: "Modern async framework with automatic documentation and validation"
+    alternatives_considered: ["Django REST", "Flask", "Starlette"]
+    
+  react_choice:
+    rationale: "Large ecosystem, component reusability, strong TypeScript support"
+    alternatives_considered: ["Vue.js", "Angular", "Svelte"]
+    
+  postgresql_choice:
+    rationale: "ACID compliance, JSON support, excellent performance, proven reliability"
+    alternatives_considered: ["MySQL", "MongoDB", "CockroachDB"]
+    
+  kubernetes_choice:
+    rationale: "Industry standard, cloud agnostic, extensive ecosystem"
+    alternatives_considered: ["Docker Swarm", "Nomad", "ECS"]
+
+# Version Management and Updates
+version_management:
+
+  update_strategy:
+    major_versions: "Annual review and planning"
+    minor_versions: "Quarterly assessment"
+    patch_versions: "Monthly security updates"
+    
+  compatibility_policy:
+    backward_compatibility: "Maintained for at least 2 major versions"
+    deprecation_notice: "6 months advance notice for breaking changes"
+    
+  dependency_management:
+    security_updates: "Automated with Dependabot"
+    version_pinning: "Lock files for reproducible builds"
+    vulnerability_monitoring: "Continuous scanning with alerts"
+
+# Technology Ecosystem Integration
+ecosystem_integration:
+
+  fleet_integration:
+    shared_libraries: "Common utilities across your projects"
+    standard_practices: "Consistent patterns across teams"
+    security_standards: "Unified security policies"
+    
+  external_ecosystems:
+    cloud_native: "CNCF landscape alignment"
+    devops_tools: "Integration with popular DevOps tools"
+    enterprise_systems: "Enterprise authentication and monitoring"
+    
+  future_considerations:
+    emerging_technologies: "AI/ML integration, edge computing, serverless"
+    scalability_requirements: "Multi-region, multi-cloud, federated deployments"
+    compliance_evolution: "Evolving security and regulatory requirements"

@@ -1,0 +1,29 @@
+---
+# Default variables for configure_hardware_access role
+
+# Hardware access groups
+hardware_groups:
+  - dialout
+  - ic  
+  - spi
+  - gpio
+  - audio
+  - video
+
+# Hardware packages
+hardware_packages:
+  - ic-tools
+  - spi-tools
+  - gpio-utils
+  - python-smbus
+  - python-spidev
+  - python-gpiozero
+
+# Interface eEnablement
+eEnable_ic: false
+eEnable_spi: false
+eEnable_gpio: false
+
+# Device configuration
+hardware_device_links: []
+hardware_udev_rules: []

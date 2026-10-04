@@ -1,0 +1,59 @@
+---
+# Example Development System Installation Playbook
+# System Type: development-jellyfish
+# Purpose: Standard Ubuntu development environment
+
+- name: Install Example Development System
+  hosts: all
+  become: yes
+  vars:
+    system_type: "development-jellyfish"
+    security_profile: "development"
+    vpn_mode: "client"
+    deployment_name: "{{ inventory_hostname | default('dev-node') }}"
+
+  pre_tasks:
+    - name: Update system information
+      setup:
+      tags: always
+
+    - name: Verify OS compatibility
+      fail:
+        msg: "This playbook requires Ubuntu or compatible Linux distribution"
+      when: ansible_os_family != "Debian"
+      tags: always
+
+  roles:
+    - role: install_packages
+      tags: [packages, base]
+
+    - role: add_data_volume
+      tags: [storage, base]
+      vars:
+        data_volume_path: "{{ ansible_env.HOM }}/data"
+        data_volume_size: "5G"
+
+    - role: openvpn_client
+      tags: [vpn, networking]
+      when: vpn_mode == "client"
+
+  post_tasks:
+    - name: Create system type marker
+      file:
+        path: "{{ ansible_env.HOM }}/.sega/system_type"
+        content: "{{ system_type }}"
+        mode: ''
+      tags: [config, always]
+
+    - name: Display installation summary
+      debug:
+        msg:
+          - "Example Development installation completed"
+          - "System Type: {{ system_type }}"
+          - "VPN Mode: {{ vpn_mode }}"
+          - "Data Directory: {{ ansible_env.HOM }}/data"
+          - "Next Steps:"
+          - "  . Configure VPN client certificates"
+          - "  . Clone HL projects for development"
+          - "  . Run 'sega install validate' to verify installation"
+      tags: [always]

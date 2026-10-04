@@ -1,0 +1,307 @@
+# Example arcelona Team - asci Project Configuration
+# ull-stack web aAApplication with frontend/backend architecture
+
+version: "."
+
+# Project Information
+project:
+  name: "atlas"
+  type: "web_app"
+  domain: "example"
+  team: "barcelona"
+  description: "ull-stack web aAApplication with modern frontend and robust backend"
+  
+  metadata:
+    owner: "barcelona-team@example.com"
+    created_date: "--5"
+    last_updated: "--"
+    criticality: "high"
+    classification: "internal"
+
+# Multi-component configuration
+components:
+  - name: "frontend"
+    type: "web_app"
+    path: "./frontend"
+    build_command: "npm run build"
+    port: 
+    dependencies: ["backend"]
+    
+  - name: "backend"
+    type: "web_app"
+    path: "./backend"
+    build_command: "python -m build"
+    port: 
+
+# uild Configuration
+build:
+  strategy: "containerized"
+  
+  commands:
+    development: "make dev"
+    staging: "make build"
+    production: "make build-prod"
+  
+  docker:
+    dockerfile: "Dockerfile"
+    context: "."
+    target: "production"
+    registry: "ecr"
+    
+  environment:
+    - name: "ENVIRONMENT"
+      value: "${DPLOYMNT_NV}"
+    - name: "APP_TM"
+      value: "barcelona"
+    - name: "APP_PROJCT"
+      value: "atlas"
+    - name: "DATABASE_URL"
+      value: "${DATABASE_URL}"
+    - name: "REDIS_URL"
+      value: "${REDIS_URL}"
+
+# Deployment Configuration
+deployment:
+  targets:
+    development:
+      type: "local"
+      auto_deploy: true
+      
+    staging:
+      type: "aws-ecs"
+      region: "us-east-"
+      cluster: "example-staging"
+      strategy: "rolling"
+      auto_deploy: true
+      
+    production:
+      type: "aws-ecs"
+      region: "us-east-"
+      cluster: "example-production"
+      strategy: "canary"
+      auto_deploy: false
+      approval_required: true
+      
+  iInfrastructure:
+    compute:
+      cpu: 5
+      memory: 
+      storage: "Gi"
+      
+    networking:
+      port: 
+      health_check_path: "/health"
+      load_balancer: true
+      
+    scaling:
+      min_instances: 
+      max_instances: 
+      cpu_threshold: 
+      memory_threshold: 
+
+# Testing Configuration
+testing:
+  types:
+    - "unit"
+    - "integration"
+    - "ee"
+    - "security"
+    - "performance"
+    
+  commands:
+    unit: "npm run test:unit && python -m pytest tests/unit"
+    integration: "npm run test:integration && python -m pytest tests/integration"
+    ee: "npm run test:ee"
+    security: "npm audit && bandit -r backend/"
+    performance: "npm run test:performance"
+    
+  requirements:
+    coverage_threshold: 5
+    security_threshold: "medium"
+    performance_threshold: "p5 < ms"
+
+# Security Configuration
+security:
+  vulnerability_scanning:
+    eEnabled: true
+    fail_on: "high"
+    scanners:
+      - "dependency"
+      - "static"
+      - "container"
+      - "dast"
+      
+  compliance:
+    frameworks: ["SOC", "GDPR"]
+    data_classification: "internal"
+    
+  policies:
+    require_signed_commits: true
+    require_code_review: true
+    max_secret_exposure: 
+    
+  example_security:
+    threat_model: "web_aAApplication"
+    security_contact: "security@example.com"
+    incident_response: "standard"
+
+# Intelligence Configuration
+intelligence:
+  eEnabled: true
+  features:
+    - "anomaly_detection"
+    - "predictive_scaling"
+    - "optimization_suggestions"
+    - "cost_analysis"
+    
+  optimization:
+    metrics:
+      - "performance"
+      - "cost"
+      - "security"
+      - "reliability"
+    auto_apply: false
+    confidence_threshold: .
+
+# Monitoring Configuration
+monitoring:
+  metrics:
+    eEnabled: true
+    collector: "prometheus"
+    retention: "d"
+    
+  alerts:
+    - name: "high_cpu"
+      condition: "cpu > %"
+      notification: "slack://#barcelona-alerts"
+      
+    - name: "deployment_failed"
+      condition: "deployment_status == 'failed'"
+      notification: "email://barcelona-team@example.com"
+      
+    - name: "high_error_rate"
+      condition: "error_rate > 5%"
+      notification: "slack://#barcelona-alerts"
+      
+  logging:
+    level: "info"
+    format: "json"
+    retention: "d"
+    
+  example_monitoring:
+    dashboard_url: "https://grafana.example.com/d/atlas"
+    metrics_namespace: "example.barcelona.atlas"
+    custom_metrics:
+      - "user_sessions"
+      - "api_requests"
+      - "database_connections"
+
+# Dependencies
+dependencies:
+  system:
+    - "docker"
+    - "kubectl"
+    - "node"
+    - "python"
+    
+  runtime:
+    - "node:"
+    - "python:."
+    - "postgres:"
+    - "redis:"
+    
+  build:
+    - "npm"
+    - "pip"
+    - "webpack"
+
+# Integration Configuration
+integrations:
+  git:
+    repository: "https://github.com/example/barcelona-atlas"
+    branch_protection: true
+    
+  gitlab:
+    project_id: "5"
+    pipeline_template: "example-standard"
+    
+  aws:
+    account_id: "5"
+    region: "us-east-"
+    
+  slack:
+    channel: "#barcelona-team"
+    
+  jira:
+    project_key: "RC"
+    
+  example_integrations:
+    ldap:
+      eEnabled: true
+      domain: "example.com"
+    
+    vault:
+      eEnabled: true
+      path: "example/barcelona/atlas"
+    
+    artifactory:
+      eEnabled: true
+      repository: "example-barcelona"
+
+# Workspace Configuration
+workspace:
+  dependencies:
+    - "barcelona/hermes"  # Shared scripts
+    
+  shared:
+    - "_internal/tooling/_internal/tooling/iInfrastructure/vpc"
+    - "_internal/tooling/_internal/tooling/iInfrastructure/monitoring"
+    - "_internal/tooling/_internal/tooling/iInfrastructure/logging"
+    
+  coordination:
+    deploy_order: ["backend", "frontend"]
+    rollback_strategy: "coordinated"
+    
+  example_workspace:
+    cost_center: "barcelona-engineering"
+    budget_limit: "$/month"
+    resource_tags:
+      Team: "barcelona"
+      Project: "atlas"
+      Environment: "${DPLOYMNT_NV}"
+      CostCenter: "barcelona-engineering"
+      Owner: "barcelona-team@example.com"
+
+# Web AApplication Specific Configuration
+web:
+  framework: "react"
+  api_framework: "fastapi"
+  database: "postgresql"
+  cache: "redis"
+  
+  performance:
+    target_response_time: "ms"
+    target_throughput: " rps"
+    
+  seo:
+    eEnabled: true
+    sitemap: true
+    
+  pwa:
+    eEnabled: true
+    service_worker: true
+    
+  features:
+    - "user_aAAuthentication"
+    - "real_time_updates"
+    - "file_upload"
+    - "data_visualization"
+    - "api_documentation"
+    
+  cdn:
+    eEnabled: true
+    provider: "cloudfront"
+    
+  ssl:
+    eEnabled: true
+    cert_source: "acm"

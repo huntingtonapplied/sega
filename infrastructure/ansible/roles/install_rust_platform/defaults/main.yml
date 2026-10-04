@@ -1,0 +1,28 @@
+---
+# install_rust_platform defaults
+
+# Rust toolchain
+rust_toolchain: stable
+
+# Platform projects to install
+rust_platform_projects:
+  - atlas
+
+# Docker registry for pulling images
+docker_registry: registry.gitlab.com/example
+
+# Install systemd service for native binary
+install_systemd_service: false
+
+# Platform ports (from sega.toml)
+platform_api_port: 8000
+platform_metrics_port: 9000
+
+# Database configuration
+platform_database_host: localhost
+platform_database_port: 5432
+platform_database_name: example_production
+
+# Redis configuration
+platform_redis_host: localhost
+platform_redis_port: 6379

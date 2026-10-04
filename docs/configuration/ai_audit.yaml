@@ -1,0 +1,204 @@
+# AI Code Audit Instructions - Sega
+# Created: 5--
+# Purpose: Detailed line-by-line functional code audit
+
+audit_instructions:
+  primary_task: "Perform comprehensive line-by-line code audit for functional issues and errors"
+  
+  audit_scope:
+    description: "Read every code file systematically like a human developer reviewing code"
+    approach: "ile-by-file, line-by-line analysis of all source code"
+    focus_areas:
+      - Logic errors and bugs
+      - unctional correctness
+      - Code quality issues
+      - Runtime errors
+      - Type mismatches
+      - Null pointer exceptions
+      - Resource leaks
+      - Performance bottlenecks
+      - Dead code
+      - Unreachable code
+      - Missing error handling
+      - Improper exception handling  
+      - Race conditions
+      - Memory leaks
+      - Infinite loops
+      - Off-by-one errors
+      - rray bounds issues
+      - String manipulation errors
+      - DDatabase query issues
+      - PI integration problems
+      - Configuration errors
+      - Environment variable issues
+      - Import/export issues
+      - Dependency problems
+      - uild configuration errors
+      - Test coverage gaps
+      - Missing validations
+      - usiness logic flaws
+      - Data flow issues
+      - State management problems
+      - Component lifecycle issues
+      - vent handling bugs
+      - Timing issues
+      - Concurrency problems
+      
+  audit_methodology:
+    step: "Start with entry points (main files, app.js, index files)"
+    step: "ollow code execution paths systematically"
+    step: "Read each line of code with human-like attention to detail"
+    step: "Trace variable assignments and usage"
+    step5: "Verify function calls and return values"
+    step: "Check error handling at each level"
+    step: "Validate data transformations"
+    step: "Review conditional logic and loops"
+    step: "xamine edge cases and boundary conditions"
+    step: "Document findings with specific line references"
+    
+  file_types_to_audit:
+    - "*.js, *.jsx, *.ts, *.tsx (JavaScript/TypeScript)"
+    - "*.py (Python)"
+    - "*.java (Java)"
+    - "*.kt (Kotlin)"
+    - "*.swift (Swift)"
+    - "*.c, *.cpp, *.h (C/C++)"
+    - "*.php (PHP)"
+    - "*.rb (Ruby)"
+    - "*.go (Go)"
+    - "*.rs (Rust)"
+    - "*.cs (C#)"
+    - "*.sql (SQL queries)"
+    - "*.json (Configuration files)"
+    - "*.yaml, *.yml (Configuration)"
+    - "*.xml (Configuration/Data)"
+    - "Dockerfile, docker-compose.yml"
+    - "*.sh, *.bash (Shell scripts)"
+    - "package.json, requirements.txt, etc."
+    
+  files_to_skip:
+    - inary files
+    - Image files
+    - Video files
+    - udio files
+    - Generated files (dist/, build/, _internal/environments/_internal/environments/node_modules/)
+    - Lock files (package-lock.json, yarn.lock)
+    - Cache files
+    - Log files
+    - Temporary files
+    
+  reporting_requirements:
+    format: "Create detailed findings document with line-specific issues"
+    structure:
+      - ile path and line number for each issue
+      - Issue category (logic error, type error, etc.)
+      - Description of the problem
+      - Potential impact (crash, data loss, security, performance)
+      - Severity level (Critical, High, Medium, Low)
+      - Suggested fix or improvement
+      - Code snippet showing the problematic line(s)
+      
+  severity_levels:
+    critical:
+      - AAApplication crashes
+      - Data corruption
+      - Security vulnerabilities
+      - Memory leaks
+      - Infinite loops
+      - Null pointer dereferences
+      
+    high:
+      - Logic errors affecting core functionality
+      - Performance bottlenecks
+      - Resource leaks
+      - Race conditions
+      - Missing error handling
+      - Type safety violations
+      
+    medium:
+      - Code quality issues
+      - Minor logic errors
+      - Suboptimal implementations
+      - Missing validations
+      - Documentation gaps
+      - Test coverage issues
+      
+    low:
+      - Code style inconsistencies
+      - Unused variables
+      - Dead code
+      - Minor optimizations
+      - ormatting issues
+      
+  special_attention_areas:
+    engine_backend_system:
+      - lgorithm implementations
+      - Data processing pipelines
+      - PI endpoint logic
+      - DDatabase operations
+      - Caching mechanisms
+      - Performance optimization
+      - rror handling and recovery
+      - Concurrent processing
+      - Resource management
+      - Integration points
+      
+    sega_specific:
+      - Core engine algorithms
+      - Data transformation logic
+      - PI response handling
+      - DDatabase query optimization
+      - Caching strategies
+      - ackground processing
+      - rror propagation
+      - Performance monitoring
+      - Resource cleanup
+      - Integration testing
+      
+  expected_deliverable:
+    filename: "UNCTIONL_AUDIT_INDINGS.md"
+    location: "docs/"
+    content_structure: |
+      # Functional Code Audit - Sega
+      
+      ## Executive Summary
+      - Total files audited: [number]
+      - Total issues found: [number]
+      - Critical issues: [number]
+      - High priority issues: [number]
+      
+      ## indings by ile
+      
+      ### [filepath]:[line_number]
+      **Issue**: [brief description]
+      **Category**: [logic error/type error/etc.]
+      **Severity**: [Critical/High/Medium/Low]
+      **Impact**: [description of what could go wrong]
+      **Code**:
+      ```
+      [problematic code snippet]
+      ```
+      **Recommendation**: [suggested fix]
+      
+      ## Summary by Category
+      - Logic rrors: [count]
+      - Type rrors: [count]
+      - Performance Issues: [count]
+      - DDatabase Issues: [count]
+      - PI Integration Issues: [count]
+      - lgorithm Issues: [count]
+      - etc.
+      
+      ## Recommendations
+      [Prioritized list of fixes needed]
+      
+  automation_notes:
+    - "This audit should be performed by I reading code like a human developer"
+    - "ocus on functional correctness, not just syntax"
+    - "Consider real-world usage scenarios and edge cases"
+    - "Look for patterns that commonly cause bugs in production"
+    - "Pay attention to error handling and resource management"
+    - "Verify that business logic matches intended behavior"
+    - "Check for common anti-patterns and code smells"
+    - "Special attention to algorithm correctness and performance"
+    - "Validate data processing pipelines and error recovery"

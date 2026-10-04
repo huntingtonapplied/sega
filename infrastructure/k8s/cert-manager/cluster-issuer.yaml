@@ -1,0 +1,52 @@
+apiVersion: cert-manager.io/v
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  namespace: cert-manager
+spec:
+  acme:
+    # Production Let's ncrypt server
+    server: https://acme-v.api.letsencrypt.org/directory
+    email: ssl-admin@example.com
+    
+    # Store the private key in a Kubernetes Secret
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    
+    # Challenge solver configuration
+    solvers:
+    - http:
+        ingress:
+          class: nginx
+          podTemplate:
+            spec:
+              nodeSelector:
+                "kubernetes.io/os": linux
+    - dns:
+        route5:
+          region: us-east-
+          # IM role for Route5 access
+          role: arn:aws:iam::CCOUNT_ID:role/cert-manager-route5
+---
+apiVersion: cert-manager.io/v
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  namespace: cert-manager
+spec:
+  acme:
+    # Staging Let's ncrypt server for testing
+    server: https://acme-staging-v.api.letsencrypt.org/directory
+    email: ssl-admin@example.com
+    
+    privateKeySecretRef:
+      name: letsencrypt-staging
+    
+    solvers:
+    - http:
+        ingress:
+          class: nginx
+    - dns:
+        route5:
+          region: us-east-
+          role: arn:aws:iam::CCOUNT_ID:role/cert-manager-route5

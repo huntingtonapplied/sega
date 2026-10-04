@@ -1,0 +1,167 @@
+---
+# Omni Platform Installation Role
+# Installs ALL fleet projects in production configuration
+# Referenced by: omni system type
+# This is the most comprehensive installation - all projects
+
+- name: Ensure omni platform directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ fleet_root }}"
+    - "{{ fleet_root }}/config"
+    - "{{ fleet_root }}/data"
+    - "{{ fleet_root }}/logs"
+    - "{{ fleet_root }}/environments"
+
+# Install all required runtimes
+- name: Install Python runtime
+  become: true
+  apt:
+    name:
+      - python3.11
+      - python3.11-venv
+      - python3-pip
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+
+- name: Install Node.js runtime
+  become: true
+  shell: |
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt-get install -y nodejs
+  args:
+    creates: /usr/bin/node
+  when: ansible_os_family == 'Debian'
+
+- name: Install Rust runtime
+  shell: |
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  args:
+    creates: "{{ ansible_env.HOME }}/.cargo/bin/rustc"
+
+# Install infrastructure services
+- name: Install infrastructure services
+  become: true
+  apt:
+    name:
+      - docker.io
+      - docker-compose
+      - postgresql-15
+      - redis-server
+      - nginx
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Add user to docker group
+  become: true
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+# Create shared environments
+- name: Create shared Python virtual environment
+  shell: python3.11 -m venv {{ fleet_root }}/environments/backend_venv
+  args:
+    creates: "{{ fleet_root }}/environments/backend_venv/bin/python"
+
+- name: Create shared node_modules directory
+  file:
+    path: "{{ fleet_root }}/environments/node_modules"
+    state: directory
+    mode: '0755'
+
+# Clone or pull all projects
+- name: Clone platform repository with submodules
+  git:
+    repo: "{{ fleet_git_repo }}"
+    dest: "{{ fleet_root }}"
+    version: "{{ fleet_git_branch }}"
+    recursive: yes
+    update: yes
+  when: fleet_git_repo is defined
+
+# Install SEGA
+- name: Install SEGA in shared environment
+  pip:
+    name: "{{ fleet_root }}/sega"
+    virtualenv: "{{ fleet_root }}/environments/backend_venv"
+    state: present
+    extra_args: "-e"
+
+# Create activation script
+- name: Create platform activation script
+  copy:
+    dest: "{{ fleet_root }}/activate.sh"
+    content: |
+      #!/bin/bash
+      # Omni Platform Activation
+      export FLEET_ROOT="{{ fleet_root }}"
+      export FLEET_USER="{{ ansible_user }}"
+      export FLEET_VENV="{{ fleet_root }}/environments/backend_venv"
+      export FLEET_NODE_MODULES="{{ fleet_root }}/environments/node_modules"
+      export PATH="{{ fleet_root }}/environments/backend_venv/bin:$HOME/.cargo/bin:$PATH"
+
+      source {{ fleet_root }}/environments/backend_venv/bin/activate
+
+      echo "Omni Platform Activated"
+      echo "Projects: {{ omni_projects | join(', ') }}"
+    mode: '0755'
+
+# Configure Docker Compose for all services
+- name: Copy omni platform Docker Compose
+  template:
+    dest: "{{ fleet_root }}/docker-compose.yml"
+    src: "docker-compose-omni.yml.j2"
+    mode: '0644'
+  when: omni_docker_compose is defined
+
+# Start shared infrastructure
+- name: Start PostgreSQL
+  become: true
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Start Redis
+  become: true
+  systemd:
+    name: redis-server
+    state: started
+    enabled: yes
+
+# Create databases for all projects
+- name: Create PostgreSQL databases for projects
+  become: true
+  become_user: postgres
+  postgresql_db:
+    name: "example_{{ item }}"
+    state: present
+  loop: "{{ omni_projects }}"
+  ignore_errors: yes
+
+# Final status
+- name: Display omni platform status
+  debug:
+    msg: |
+      Omni Platform installed successfully!
+
+      Installed components:
+      - Python 3.11 + virtual environment
+      - Node.js 20 + shared node_modules
+      - Rust toolchain
+      - PostgreSQL 15
+      - Redis
+      - Docker + Docker Compose
+      - Nginx
+      - SEGA orchestrator
+
+      Projects configured: {{ omni_projects | length }}
+
+      Activate with: source {{ fleet_root }}/activate.sh
+      Start services: cd {{ fleet_root }} && sega local up

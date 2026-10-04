@@ -1,0 +1,288 @@
+# PyTorch Image Classifier - ML Pipeline Example
+# Demonstrates SEGA's machine learning deployment capabilities
+
+version: "2.1"
+
+# Project Information
+project:
+  name: "sega-pytorch-classifier"
+  type: "ml_pipeline"
+  domain: "examples"
+  team: "ml-demo"
+  description: "PyTorch image classification model with training and inference pipelines"
+  
+  metadata:
+    owner: "ml-demo@example.com"
+    created_date: "2025-01-24"
+    criticality: "medium"
+    classification: "internal"
+
+# Build Configuration
+build:
+  strategy: "containerized"
+  
+  commands:
+    development: "python -m src.train --config config/dev.yaml"
+    staging: "python -m src.train --config config/staging.yaml && python -m src.build_model"
+    production: "python -m src.train --config config/prod.yaml && python -m src.build_model && python -m src.optimize_model"
+  
+  docker:
+    dockerfile: "Dockerfile"
+    context: "."
+    target: "production"
+    
+  environment:
+    - name: "CUDA_VISIBLE_DEVICES"
+      value: "${GPU_DEVICES:-0}"
+    - name: "PYTHONPATH"
+      value: "/app/src"
+    - name: "MODEL_VERSION"
+      value: "${BUILD_NUMBER:-1.0.0}"
+    - name: "WANDB_API_KEY"
+      value: "${WANDB_API_KEY}"
+    - name: "MLFLOW_TRACKING_URI"
+      value: "${MLFLOW_TRACKING_URI}"
+
+# Deployment Configuration
+deployment:
+  targets:
+    development:
+      type: "local"
+      auto_deploy: true
+      
+    staging:
+      type: "aws-ecs"
+      region: "us-east-1"
+      cluster: "ml-staging"
+      strategy: "rolling"
+      
+    production:
+      type: "aws-ecs"
+      region: "us-east-1"
+      cluster: "ml-production"
+      strategy: "canary"
+      auto_deploy: false
+      approval_required: true
+      
+  infrastructure:
+    compute:
+      cpu: 2048
+      memory: 8192
+      gpu: 1
+      storage: "50GB"
+      
+    networking:
+      port: 8000
+      health_check_path: "/health"
+      load_balancer: true
+      
+    scaling:
+      min_instances: 1
+      max_instances: 5
+      cpu_threshold: 60
+      memory_threshold: 70
+      gpu_threshold: 80
+
+# Testing Configuration
+testing:
+  types:
+    - "unit"
+    - "integration"
+    - "model_validation"
+    - "performance"
+    - "security"
+    
+  commands:
+    unit: "python -m pytest tests/unit/ -v"
+    integration: "python -m pytest tests/integration/ -v"
+    model_validation: "python -m src.validate_model --test-data data/test"
+    performance: "python -m src.benchmark_model --batch-size 32"
+    security: "bandit -r src/ && safety check"
+    
+  requirements:
+    coverage_threshold: 80
+    model_accuracy_threshold: 0.85
+    inference_latency_threshold: "100ms"
+    security_threshold: "high"
+
+# Security Configuration
+security:
+  vulnerability_scanning:
+    enabled: true
+    fail_on: "high"
+    scanners:
+      - "dependency"
+      - "static"
+      - "container"
+      
+  policies:
+    require_signed_commits: true
+    require_code_review: true
+    max_secret_exposure: 0
+    model_scanning: true
+    data_privacy: true
+
+# Monitoring Configuration
+monitoring:
+  metrics:
+    enabled: true
+    collector: "prometheus"
+    retention: "90d"
+    custom_metrics:
+      - "model_predictions_total"
+      - "model_accuracy"
+      - "inference_duration"
+      - "gpu_utilization"
+      - "model_drift_score"
+    
+  alerts:
+    - name: "model_accuracy_drop"
+      condition: "model_accuracy < 0.80"
+      notification: "slack://ml-alerts"
+      
+    - name: "high_inference_latency"
+      condition: "inference_duration_p95 > 200ms"
+      notification: "email://ml-demo@example.com"
+      
+    - name: "gpu_memory_high"
+      condition: "gpu_memory_usage > 90%"
+      notification: "slack://ml-alerts"
+      
+    - name: "model_drift_detected"
+      condition: "model_drift_score > 0.1"
+      notification: "email://ml-demo@example.com"
+      
+  logging:
+    level: "info"
+    format: "json"
+    retention: "30d"
+    model_logging: true
+
+# Dependencies
+dependencies:
+  system:
+    - "docker"
+    - "python"
+    - "cuda"
+    
+  runtime:
+    - "python:3.11"
+    - "pytorch:2.1-cuda"
+    - "nvidia/cuda:12.1-runtime"
+    
+  build:
+    - "pip"
+    - "conda"
+
+# ML-specific Configuration
+ml:
+  frameworks:
+    - "pytorch"
+    - "torchvision"
+    - "transformers"
+    
+  infrastructure:
+    gpu_required: true
+    accelerator: "nvidia-tesla-v100"
+    distributed_training: false
+    
+  data:
+    sources:
+      - "s3://ml-datasets/images/"
+      - "local://data/"
+    validation_split: 0.2
+    test_split: 0.1
+    preprocessing: "src.data.preprocess"
+    
+  model:
+    type: "image_classifier"
+    architecture: "resnet50"
+    version: "1.0"
+    input_shape: [3, 224, 224]
+    num_classes: 1000
+    
+  training:
+    batch_size: 32
+    epochs: 50
+    learning_rate: 0.001
+    optimizer: "adam"
+    scheduler: "cosine"
+    early_stopping: true
+    patience: 10
+    
+    # Distributed training
+    strategy: "single_gpu"
+    mixed_precision: true
+    gradient_clipping: 1.0
+    
+    # Hyperparameter tuning
+    hyperparameter_search: false
+    search_algorithm: "optuna"
+    search_trials: 50
+    
+  inference:
+    batch_size: 16
+    latency_target: "50ms"
+    throughput_target: "1000 req/s"
+    model_format: "torchscript"
+    
+    # Model optimization
+    quantization: false
+    tensorrt_optimization: false
+    onnx_export: true
+    
+  experiment_tracking:
+    enabled: true
+    backend: "mlflow"
+    experiment_name: "image_classifier"
+    
+    # Weights & Biases integration
+    wandb:
+      enabled: true
+      project: "sega-pytorch-classifier"
+      tags: ["pytorch", "resnet", "classification"]
+      
+  model_registry:
+    enabled: true
+    registry: "mlflow"
+    staging_alias: "staging"
+    production_alias: "production"
+    
+    # Model versioning
+    auto_promote: false
+    approval_required: true
+    
+  data_validation:
+    enabled: true
+    schema_validation: true
+    data_drift_detection: true
+    statistical_tests: true
+    
+  feature_store:
+    enabled: false
+    backend: "feast"
+    
+# Model Serving Configuration
+serving:
+  framework: "torchserve"
+  replicas: 2
+  
+  endpoints:
+    - path: "/predict"
+      method: "POST"
+      timeout: "30s"
+      
+    - path: "/batch_predict"
+      method: "POST"
+      timeout: "300s"
+      
+  preprocessing:
+    resize: [224, 224]
+    normalize: true
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+    
+  postprocessing:
+    top_k: 5
+    confidence_threshold: 0.5
+    class_names: "config/class_names.json"
