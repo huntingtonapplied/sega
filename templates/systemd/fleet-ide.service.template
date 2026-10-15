@@ -1,0 +1,32 @@
+[Unit]
+Description=SEGA {{PROJECT_NAME}} IDE ({{APP_NAME}}) - port {{PORT}}
+After=network.target
+PartOf=sega-{{PROJECT_NAME}}.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory={{FLEET_ROOT}}/{{PROJECT_NAME}}/{{APP_PATH}}
+Environment=NODE_ENV=production
+Environment=PORT={{PORT}}
+
+# Start VS Code fork web server
+ExecStart=/usr/bin/node ./scripts/code-web.js --host 0.0.0.0 --port {{PORT}}
+
+# Restart policy - recover automatically on crash
+Restart=always
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=5
+
+# Resource limits - IDE is memory-intensive
+MemoryMax=2G
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sega-{{PROJECT_NAME}}-{{APP_NAME}}
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,215 @@
+# SEGA Function Map - Component Location Reference
+# Updated: 2025-12-15 (Post-restructure to engine/sega/)
+
+cli_commands:
+  # Consolidated Command Groups (Actions are commands, platforms are options)
+
+  sega_local:
+    location: engine/sega/cli/commands/local.py
+    implementation: engine/sega/local/
+    functionality: Local development lifecycle (up, down, status, logs)
+
+  sega_forge:
+    location: engine/sega/cli/commands/forge.py
+    implementation: engine/sega/forge/
+    subcommands: [build, dev, compile, package, sign, publish, release]
+    functionality: Build, compile, package, sign, and distribute artifacts
+
+  sega_ship:
+    location: engine/sega/cli/commands/ship.py
+    implementation: engine/sega/ship/
+    subcommands: [deploy, rollback, status, promote, validate]
+    functionality: Deployment lifecycle management
+
+  sega_probe:
+    location: engine/sega/cli/commands/probe.py
+    implementation: engine/sega/probe/
+    subcommands: [run, unit, integration, e2e, api, browser, coverage, benchmark]
+    functionality: Test orchestration and execution
+
+  sega_doctor:
+    location: engine/sega/cli/commands/doctor.py
+    implementation: engine/sega/doctor/
+    subcommands: [check, diagnose, repair, optimize, scan, report]
+    functionality: Diagnostics, repair, and security scanning
+
+  sega_infrastructure:
+    location: engine/sega/cli/commands/infrastructure.py
+    implementation: engine/sega/infrastructure/
+    subcommands: [vpn, engine, runner, network, provision, status]
+    functionality: Infrastructure provisioning and management
+
+  sega_secrets:
+    location: engine/sega/cli/commands/secrets.py
+    implementation: engine/sega/secrets/
+    subcommands: [pull, push, list, test, apply]
+    functionality: GitLab CI/CD secrets management
+
+  sega_sysmon:
+    location: engine/sega/cli/commands/sysmon.py
+    implementation: engine/sega/system/sysmon/
+    subcommands: [status, analyze, dashboard, cleanup, report, projects]
+    functionality: System monitoring for local and EC2 instances
+
+  sega_sysnc:
+    location: engine/sega/cli/commands/sysnc.py
+    implementation: engine/sega/system/sysnc/
+    subcommands: [inspect, analyze, run, bulk, settings]
+    functionality: Multi-system git synchronization
+
+domain_packages:
+  local:
+    location: engine/sega/local/
+    files:
+      - manager.py        # LocalDeploymentManager
+      - shared_infra.py   # SharedInfrastructureManager
+      - nginx.py          # NginxManager
+    functionality: Local development environment management
+
+  forge:
+    location: engine/sega/forge/
+    subdirectories:
+      - protection/       # Nuitka, Bytenode, JS-Obfuscator
+      - packaging/        # Electron, Expo, VS Code
+      - signing/          # macOS, Windows, Linux code signing
+      - distribution/     # S3, registries
+    functionality: Build, package, sign, and distribute
+
+  ship:
+    location: engine/sega/ship/
+    files:
+      - service.py        # DeploymentService
+      - registry.py       # RegistryDeployer
+      - production.py     # ProductionSetup
+    subdirectories:
+      - deployers/        # Docker, K8s, Ansible, ECS deployers
+      - strategies/       # Rolling, blue-green, canary
+    functionality: Deployment lifecycle
+
+  probe:
+    location: engine/sega/probe/
+    files:
+      - orchestrator.py   # TestOrchestrator
+    subdirectories:
+      - runners/          # Unit, integration, browser, API runners
+      - mobile/           # iOS/Android testing
+      - chaining/         # Test data chaining
+    functionality: Test orchestration
+
+  doctor:
+    location: engine/sega/doctor/
+    files:
+      - health.py
+      - repair.py
+      - security.py
+    subdirectories:
+      - validation/
+    functionality: Diagnostics and repair
+
+  infrastructure:
+    location: engine/sega/infrastructure/
+    files:
+      - ec2_config.py
+      - vpn_manager.py
+      - engine_deployer.py
+      - runner_manager.py
+      - network_orchestrator.py
+    subdirectories:
+      - cloud/            # AWS/Terraform management
+    functionality: Infrastructure provisioning
+
+  secrets:
+    location: engine/sega/secrets/
+    files:
+      - gitlab.py
+      - social.py
+    functionality: Secrets management
+
+  system:
+    location: engine/sega/system/
+    subdirectories:
+      - sysmon/           # Bash monitoring scripts
+      - sysnc/            # Bash sync scripts
+    functionality: System utilities
+
+shared_packages:
+  project:
+    location: engine/sega/project/
+    files:
+      - detector.py       # ProjectDetector
+      - ledger.py
+      - workspace.py
+    functionality: Project detection and workspace management
+
+  core:
+    location: engine/sega/core/
+    files:
+      - di.py             # Dependency injection
+      - config.py
+      - logging.py
+    functionality: Shared cross-cutting concerns
+
+  services:
+    location: engine/sega/services/
+    files:
+      - fleet_service.py
+    functionality: Shared services
+
+  api:
+    location: engine/sega/api/
+    functionality: REST/gRPC endpoints
+
+  utils:
+    location: engine/sega/utils/
+    functionality: Common utilities
+
+  installation:
+    location: engine/sega/installation/
+    files:
+      - system_types.py   # System type definitions (loads from config/sega.toml)
+      - installer.py
+      - ansible_installer.py
+    functionality: System installation
+
+infrastructure_components:
+  terraform:
+    location: infrastructure/terraform/
+    modules:
+      - modules/vpc/              # VPC networking
+      - modules/ecs/              # ECS container service
+      - modules/eks/              # EKS Kubernetes cluster (GPU nodes)
+      - modules/keda/             # KEDA autoscaling
+      - modules/rds/              # Database provisioning
+      - modules/devops/           # DevOps infrastructure
+      - modules/aws_full_deployment/  # Complete AWS stack
+    functionality: Infrastructure as Code for AWS
+
+  ansible:
+    location: infrastructure/ansible/
+    subdirectories:
+      - roles/                    # 23+ Ansible roles
+      - playbooks/
+      - inventories/
+    functionality: Node configuration and deployment
+
+  kubernetes:
+    location: infrastructure/k8s/
+    subdirectories:
+      - cert-manager/             # Certificate management
+    functionality: Kubernetes configuration
+
+data_flows:
+  deployment_flow:
+    entry: sega ship deploy
+    path: cli/commands/ship.py → ship/service.py → ship/deployers/router.py → infrastructure/
+    output: Deployed application with monitoring
+
+  testing_flow:
+    entry: sega probe run
+    path: cli/commands/probe.py → probe/orchestrator.py → probe/runners/
+    output: Test results and reports
+
+  local_development_flow:
+    entry: sega local up
+    path: cli/commands/local.py → local/manager.py → local/shared_infra.py
+    output: Running local development environment

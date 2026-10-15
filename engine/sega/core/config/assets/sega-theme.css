@@ -1,0 +1,364 @@
+/* ==========================================================================
+   SEGA dark-tech theme for the Dash config dashboard.
+   Mirrors the live-status landing (status_routes.py LANDING_HTML) so both
+   pages read as ONE cohesive dashboard: same palette, dot-grid background,
+   typography, panels, buttons, inputs, and nav.
+   Dash auto-includes every .css in this assets/ folder.
+   ========================================================================== */
+
+:root {
+  --primary: #c27b7f;
+  --secondary: #8fa890;
+  --contrast: #6b8db5;
+  --bg: #0e1013;
+  --panel: #16181c;
+  --panel2: #1c1f24;
+  --line: #282c32;
+  --line2: #33383f;
+  --text: #eceae6;
+  --muted: #8b9096;
+  --muted2: #6a6f76;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --down: #f87171;
+  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, 'Cascadia Mono', monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+  --dotgrid: rgba(255,255,255,.028);
+  --glow1: rgba(194,123,127,.06);
+  --glow2: rgba(143,168,144,.05);
+}
+
+/* Light palette — same variables, flipped values (matches the landing's light mode).
+   Toggled by sega-theme.js via <html data-theme="light">, persisted in localStorage
+   under the SAME key as the landing so the choice follows you across pages. */
+html[data-theme="light"] {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --panel2: #f2f4f6;
+  --line: #e4e7ec;
+  --line2: #d3d8df;
+  --text: #1a1d21;
+  --muted: #5b616a;
+  --muted2: #878d96;
+  --ok: #16a34a;
+  --warn: #c2740b;
+  --down: #dc2626;
+  --contrast: #2563eb;
+  --dotgrid: rgba(0,0,0,.045);
+  --glow1: rgba(194,123,127,.10);
+  --glow2: rgba(143,168,144,.09);
+}
+
+/* --- page ---------------------------------------------------------------- */
+html, body {
+  background:
+    radial-gradient(circle at 1px 1px, var(--dotgrid) 1px, transparent 1.6px) 0 0/22px 22px,
+    radial-gradient(1200px 600px at 78% -8%, var(--glow1), transparent 60%),
+    radial-gradient(1000px 500px at 8% -10%, var(--glow2), transparent 55%),
+    var(--bg) !important;
+  background-attachment: fixed !important;
+  color: var(--text) !important;
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Light-mode: flip the DataTable's inline dark styles (style_cell/style_header are
+   inline, so they need !important to override). Validation-highlight cells keep
+   their inline colors only in dark mode — acceptable: registry currently validates
+   clean, and light mode is a viewing preference. */
+html[data-theme="light"] .dash-table-container .dash-spreadsheet-inner td {
+  background-color: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+}
+html[data-theme="light"] .dash-table-container .dash-spreadsheet-inner th {
+  background-color: var(--panel2) !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+  border-bottom-color: var(--primary) !important;
+}
+
+.container-fluid { max-width: 1560px; }
+
+h1 { font-size: 22px !important; font-weight: 650; letter-spacing: -0.01em; color: var(--text); }
+.text-muted { color: var(--muted) !important; }
+
+/* --- panels / cards ------------------------------------------------------ */
+.rounded, .card, .modal-content {
+  background-color: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 12px !important;
+  color: var(--text);
+}
+
+/* --- buttons (match landing .btn) ---------------------------------------- */
+.btn {
+  border-radius: 8px !important;
+  font-size: 12.5px !important;
+  letter-spacing: .02em;
+  transition: border-color .15s, background-color .15s, color .15s;
+}
+.btn-primary {
+  background-color: rgba(194,123,127,.16) !important;
+  border: 1px solid var(--primary) !important;
+  color: #e8c7c9 !important;
+}
+.btn-primary:hover { background-color: rgba(194,123,127,.3) !important; color: #fff !important; }
+.btn-outline-info, .btn-outline-secondary, .btn-outline-danger, .btn-secondary {
+  background-color: var(--panel2) !important;
+  border: 1px solid var(--line2) !important;
+  color: var(--text) !important;
+}
+.btn-outline-info:hover { border-color: var(--contrast) !important; color: var(--contrast) !important; }
+.btn-outline-secondary:hover { border-color: var(--secondary) !important; color: var(--secondary) !important; }
+.btn-outline-danger:hover { border-color: var(--down) !important; color: var(--down) !important; }
+
+/* --- badges (stats row) --------------------------------------------------- */
+.badge {
+  font-size: 11px !important;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  padding: 5px 10px !important;
+  border: 1px solid transparent;
+  background-color: var(--panel2) !important;
+  color: var(--muted) !important;
+}
+.badge.bg-primary   { border-color: var(--primary) !important;  color: #e8c7c9 !important; }
+.badge.bg-success   { border-color: rgba(74,222,128,.45) !important; color: var(--ok) !important; }
+.badge.bg-warning   { border-color: rgba(251,191,36,.45) !important; color: var(--warn) !important; }
+.badge.bg-danger    { border-color: rgba(248,113,113,.45) !important; color: var(--down) !important; }
+.badge.bg-info      { border-color: rgba(107,141,181,.5) !important; color: var(--contrast) !important; }
+.badge.bg-secondary { border-color: var(--line2) !important; color: var(--muted) !important; }
+
+/* --- form controls / search ---------------------------------------------- */
+.form-control, .form-control:focus, input.dash-filter--case--insensitive {
+  background-color: var(--panel2) !important;
+  border: 1px solid var(--line2) !important;
+  color: var(--text) !important;
+  border-radius: 8px !important;
+  font-size: 13px;
+  box-shadow: none !important;
+}
+.form-control:focus { border-color: var(--primary) !important; }
+.form-control::placeholder { color: var(--muted2) !important; }
+label, .form-label { color: var(--muted) !important; font-size: 11px !important;
+  text-transform: uppercase; letter-spacing: .08em; font-weight: 600 !important; }
+
+/* --- dcc.Dropdown (Dash 4 custom component: dash-dropdown-* classes) ------- */
+.dash-dropdown-wrapper,
+.dash-dropdown-trigger,
+.dash-dropdown-grid-container {
+  background-color: var(--panel2) !important;
+  border-color: var(--line2) !important;
+  border-radius: 8px !important;
+  color: var(--text) !important;
+}
+.dash-dropdown-trigger:hover,
+.dash-dropdown-wrapper:focus-within { border-color: var(--primary) !important; box-shadow: none !important; }
+.dash-dropdown-value { color: var(--text) !important; font-size: 13px; }
+.dash-dropdown-value.dash-dropdown-placeholder { color: var(--muted2) !important; }
+.dash-dropdown-value-item, .dash-dropdown-value-count {
+  background-color: var(--panel) !important; color: var(--text) !important;
+  border: 1px solid var(--line2) !important; border-radius: 6px !important;
+}
+.dash-dropdown-trigger-icon, .dash-dropdown-clear, .dash-dropdown-search-icon {
+  color: var(--muted) !important; fill: var(--muted) !important;
+}
+.dash-dropdown-content {
+  background-color: var(--panel2) !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35) !important;
+  color: var(--text) !important;
+  overflow: hidden;
+}
+.dash-dropdown-search-container, .dash-dropdown-search {
+  background-color: var(--panel2) !important; color: var(--text) !important;
+  border-color: var(--line2) !important;
+}
+.dash-dropdown-options { background-color: var(--panel2) !important; }
+.dash-dropdown-option {
+  background-color: transparent !important; color: var(--text) !important; font-size: 13px;
+}
+.dash-dropdown-option:hover,
+.dash-dropdown-option[aria-selected="true"],
+.dash-dropdown-option.focused, .dash-dropdown-option.selected {
+  background-color: rgba(194,123,127,.16) !important; color: #fff !important;
+}
+.dash-dropdown-actions, .dash-dropdown-action-button {
+  background-color: var(--panel2) !important; color: var(--muted) !important;
+  border-color: var(--line2) !important;
+}
+
+/* Legacy react-select classes (DataTable inline dropdowns, older dcc) — kept
+   defensively; harmless if absent. */
+.dash-table-container .Select-control, .dash-dropdown .Select-control {
+  background-color: var(--panel2) !important;
+  border: 1px solid var(--line2) !important; color: var(--text) !important; }
+.dash-table-container .Select-menu-outer, .dash-dropdown .Select-menu-outer {
+  background-color: var(--panel2) !important; border: 1px solid var(--line2) !important; }
+.dash-table-container .Select-value-label, .dash-dropdown .Select-value-label,
+.dash-dropdown .Select-placeholder { color: var(--text) !important; }
+.dash-dropdown .VirtualizedSelectOption { background-color: var(--panel2); color: var(--text); }
+.dash-dropdown .VirtualizedSelectFocusedOption { background-color: rgba(194,123,127,.16) !important; }
+
+/* --- DataTable ------------------------------------------------------------ */
+/* NOTE: no overflow:hidden here — it clips the status column's react-select menu
+   (the phase dropdown appeared broken because its open menu was clipped). */
+.dash-table-container { border-radius: 12px; overflow: visible; border: 1px solid var(--line); }
+/* Make sure the open dropdown menu paints above neighboring cells/rows. */
+.dash-table-container .Select { position: relative; }
+.dash-table-container .Select-menu-outer {
+  display: block !important;
+  z-index: 500 !important;
+  max-height: 220px;
+}
+.dash-table-container .Select-menu { max-height: 216px; }
+.dash-table-container .Select-option {
+  background-color: var(--panel2) !important; color: var(--text) !important; font-size: 13px;
+}
+.dash-table-container .Select-option.is-focused,
+.dash-table-container .Select-option.is-selected {
+  background-color: rgba(194,123,127,.16) !important; color: #fff !important;
+}
+.dash-table-container .Select-arrow { border-color: var(--muted) transparent transparent !important; }
+.dash-table-container .Select-input > input { color: var(--text) !important; }
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td,
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+  font-family: var(--sans);
+}
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+  text-transform: uppercase; letter-spacing: .07em; font-size: 11px !important;
+}
+/* Port columns render in mono via the DataTable's style_cell_conditional (keyed
+   by column id, so it survives the column picker reordering/hiding columns). */
+.dash-table-container .previous-next-container .page-number { color: var(--muted); }
+.dash-table-container .previous-next-container button {
+  background: var(--panel2) !important; border: 1px solid var(--line2) !important;
+  color: var(--text) !important; border-radius: 6px !important;
+}
+
+/* --- modal ---------------------------------------------------------------- */
+.modal-content { background-color: var(--panel) !important; }
+.modal-header, .modal-footer { border-color: var(--line) !important; }
+.modal-backdrop.show { opacity: .6; }
+
+/* --- alerts ---------------------------------------------------------------- */
+.alert { border-radius: 10px !important; border-width: 1px !important; }
+.alert-success { background-color: rgba(74,222,128,.08) !important;
+  border-color: rgba(74,222,128,.3) !important; color: var(--ok) !important; }
+.alert-warning { background-color: rgba(251,191,36,.08) !important;
+  border-color: rgba(251,191,36,.3) !important; color: var(--warn) !important; }
+.alert-danger { background-color: rgba(248,113,113,.08) !important;
+  border-color: rgba(248,113,113,.3) !important; color: var(--down) !important; }
+.alert-info { background-color: rgba(107,141,181,.08) !important;
+  border-color: rgba(107,141,181,.35) !important; color: var(--contrast) !important; }
+
+/* --- tooltip --------------------------------------------------------------- */
+.tooltip-inner { background-color: var(--panel2) !important; border: 1px solid var(--line2);
+  color: var(--text) !important; border-radius: 8px; }
+
+/* --- shared nav (identical structure/classes to the landing header) -------- */
+.sega-nav {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 2px 16px; margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg); backdrop-filter: blur(10px);
+}
+.sega-nav::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--primary) 20%, var(--secondary) 80%, transparent);
+  opacity: .5;
+}
+.sega-nav .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; }
+.sega-nav .logo { width: 34px; height: 34px; }
+.sega-nav .wordmark { font-size: 20px; font-weight: 700; letter-spacing: .14em; color: var(--text); }
+.topnav { display: flex; gap: 12px; align-items: center; }
+.navgroup { display: flex; background: var(--panel); border: 1px solid var(--line2);
+  border-radius: 9px; padding: 3px; }
+.navlink { color: var(--muted) !important; text-decoration: none !important; font-size: 11.5px;
+  text-transform: uppercase; letter-spacing: .07em; padding: 7px 15px; border-radius: 6px;
+  transition: all .15s; }
+.navlink:hover { color: var(--text) !important; }
+.navlink.active { color: var(--text) !important; background: var(--panel2);
+  box-shadow: inset 0 0 0 1px var(--line2); }
+.iconbtn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line2); background: var(--panel2); color: var(--text);
+  border-radius: 8px; font-size: 14px; cursor: pointer; transition: border-color .15s, color .15s; }
+.iconbtn:hover { border-color: var(--primary); color: var(--primary); }
+
+/* generic themed panel (filter bar etc.) */
+.sega-panel { background-color: var(--panel) !important; border: 1px solid var(--line) !important; }
+
+/* --- status chips (same outline-chip language as the landing) -------------- */
+.schip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: .09em; font-weight: 700;
+  padding: 4px 9px; border-radius: 5px; border: 1px solid var(--line2);
+  color: var(--muted); background: transparent; margin-right: 6px;
+}
+.schip b { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text); }
+.schip .cdot { width: 7px; height: 7px; border-radius: 50%; background: var(--unknown, #9ca3af); }
+.schip.ok   { color: var(--ok);        border-color: rgba(74,222,128,.45); }
+.schip.ok   .cdot { background: var(--ok); }
+.schip.run  { color: var(--secondary); border-color: rgba(143,168,144,.5); }
+.schip.run  .cdot { background: var(--secondary); }
+.schip.unr  { color: var(--contrast);  border-color: rgba(107,141,181,.5); }
+.schip.unr  .cdot { background: var(--contrast); }
+.schip.warn { color: var(--warn);      border-color: rgba(251,191,36,.45); }
+.schip.warn .cdot { background: var(--warn); }
+.schip.down { color: var(--down);      border-color: rgba(248,113,113,.5); }
+.schip.down .cdot { background: var(--down); }
+.schip.neutral .cdot { display: none; }
+.schip-label {
+  font-size: 10px; color: var(--muted2); text-transform: uppercase; letter-spacing: .14em;
+  margin-right: 8px;
+}
+
+/* --- settings popover (gear) — identical to the landing header ------------ */
+.settings-wrap { position: relative; display: inline-flex; }
+.settings-pop {
+  position: absolute; right: 0; top: calc(100% + 8px); width: 250px;
+  background: var(--panel); border: 1px solid var(--line2); border-radius: 10px; padding: 12px;
+  z-index: 60; display: none; box-shadow: 0 12px 34px rgba(0,0,0,.42);
+}
+.settings-pop.show { display: block; }
+.settings-row { margin-bottom: 12px; }
+.settings-row:last-child { margin-bottom: 0; }
+.settings-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .12em;
+  color: var(--muted2) !important; margin-bottom: 6px; font-weight: 600; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 2px; background: var(--panel2);
+  border: 1px solid var(--line2); border-radius: 8px; padding: 2px; }
+.seg button { border: none; background: transparent; color: var(--muted); font-family: var(--sans);
+  font-size: 11px; padding: 5px 11px; border-radius: 6px; cursor: pointer;
+  transition: color .12s, background .12s; }
+.seg button:hover { color: var(--text); }
+.seg button.active { background: var(--panel); color: var(--text); box-shadow: inset 0 0 0 1px var(--line2); }
+.settings-env { font-size: 11px; color: var(--muted); line-height: 1.7; font-family: var(--mono); }
+.settings-env b { color: var(--text); font-weight: 600; }
+
+/* --- mobile -------------------------------------------------------------- */
+/* Keep the nav a single row (brand · toggle · Live/Config pills) but tighten it
+   so it fits a phone; trim the page gutters. Mirrors the landing's breakpoints
+   so both surfaces feel identical on mobile. The DataTable keeps its own
+   horizontal scroll (style_table overflowX:auto) — expected for a wide grid. */
+@media (max-width: 640px) {
+  .container-fluid.p-4 { padding: 14px !important; }
+  .sega-nav { padding: 10px 0 12px; margin-bottom: 14px; gap: 10px; }
+  .sega-nav .logo { width: 28px; height: 28px; }
+  .sega-nav .wordmark { font-size: 17px; letter-spacing: .1em; }
+  .topnav { gap: 8px; }
+  .navlink { padding: 6px 10px; font-size: 10.5px; letter-spacing: .05em; }
+  /* Anchor the settings popover to the full-width nav row (.sega-nav is
+     position:relative) instead of the gear button, so the 250px menu can't
+     hang past the viewport edge when the gear sits mid-header. */
+  .settings-wrap { position: static; }
+  .settings-pop { max-width: calc(100vw - 28px); }
+}
+@media (max-width: 380px) {
+  .sega-nav .wordmark { font-size: 15px; }
+  .navlink { padding: 5px 8px; letter-spacing: .03em; }
+}

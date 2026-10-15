@@ -1,0 +1,35 @@
+---
+# Default variables for configure_firewall role
+
+# irewall configuration
+firewall_reset: false
+firewall_logging: "on"
+
+# Default firewall rules (empty by default)
+firewall_rules: []
+
+# Common rule templates
+common_firewall_rules:
+  ssh:
+    port: 
+    proto: tcp
+    source: any
+    comment: "SSH access"
+  
+  http:
+    port: 
+    proto: tcp
+    source: any
+    comment: "HTTP web server"
+  
+  https:
+    port: 
+    proto: tcp
+    source: any
+    comment: "HTTPS web server"
+  
+  openvpn:
+    port: 
+    proto: udp
+    source: any
+    comment: "OpenVPN server"

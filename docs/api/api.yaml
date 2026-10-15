@@ -1,0 +1,990 @@
+# ================================
+# PROJECT API SPECIFICATION
+# Project: SEGA - the fleet CLI for a whole portfolio of services
+# File: docs/api.yaml
+# Purpose: Complete API documentation and specifications
+# ================================
+
+project:
+  name: "SEGA"
+  description: "The fleet CLI: one command grammar for your whole portfolio of services"
+  api_approach: "RESTful API with OpenAPI 3.0 specification and GraphQL support for complex queries"
+
+# API Overview
+api_overview:
+  base_url: "https://api.sega.example.com"
+  version: "v1"
+  protocol: "HTTPS"
+  format: "JSON"
+  authentication: "OAuth 2.0 / JWT Bearer tokens"
+  rate_limiting: "1000 requests per hour per user"
+  
+  supported_methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
+  content_types: ["application/json", "application/x-yaml", "multipart/form-data"]
+  
+# Authentication and Authorization
+authentication:
+  
+  oauth2_flow:
+    type: "Authorization Code with PKCE"
+    authorization_url: "https://auth.example.com/oauth/authorize"
+    token_url: "https://auth.example.com/oauth/token"
+    scopes:
+      read: "Read access to portfolio and project data"
+      write: "Write access to configurations and deployments"
+      admin: "Administrative access to all resources"
+      deploy: "Permission to trigger deployments"
+      security: "Access to security scanning and results"
+      
+  jwt_tokens:
+    algorithm: "RS256"
+    expiration: "24 hours"
+    refresh_token_expiration: "30 days"
+    
+  api_key_auth:
+    header: "X-API-Key"
+    description: "Alternative authentication for service accounts"
+    scopes: "Configurable per API key"
+    
+  examples:
+    bearer_token:
+      header: "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+    api_key:
+      header: "X-API-Key: sega_api_1234567890abcdef"
+
+# Core API Endpoints
+api_endpoints:
+
+  # Portfolio Management
+  portfolio:
+    base_path: "/api/v1/portfolio"
+    
+    endpoints:
+      list_projects:
+        method: "GET"
+        path: "/projects"
+        description: "List all projects in the portfolio"
+        parameters:
+          query:
+            team: "Filter by team name"
+            type: "Filter by project type"
+            status: "Filter by project status"
+            limit: "Number of results per page (default: 50)"
+            offset: "Pagination offset"
+            search: "Search projects by name or description"
+        responses:
+          200:
+            description: "List of projects"
+            schema: "ProjectList"
+          400:
+            description: "Invalid parameters"
+          401:
+            description: "Authentication required"
+          
+      get_portfolio_summary:
+        method: "GET"
+        path: "/summary"
+        description: "Get portfolio overview and statistics"
+        responses:
+          200:
+            description: "Portfolio summary"
+            schema: "PortfolioSummary"
+            
+      initialize_portfolio:
+        method: "POST"
+        path: "/initialize"
+        description: "Initialize portfolio discovery and configuration"
+        request_body:
+          schema: "PortfolioInitRequest"
+        responses:
+          202:
+            description: "Initialization started"
+            schema: "AsyncOperation"
+            
+      validate_portfolio:
+        method: "POST"
+        path: "/validate"
+        description: "Validate all project configurations"
+        responses:
+          200:
+            description: "Validation results"
+            schema: "ValidationResults"
+
+  # Project Management
+  projects:
+    base_path: "/api/v1/projects"
+    
+    endpoints:
+      create_project:
+        method: "POST"
+        path: "/"
+        description: "Create a new project configuration"
+        request_body:
+          schema: "ProjectCreateRequest"
+        responses:
+          201:
+            description: "Project created"
+            schema: "Project"
+            
+      get_project:
+        method: "GET"
+        path: "/{project_id}"
+        description: "Get project details"
+        parameters:
+          path:
+            project_id: "Unique project identifier"
+        responses:
+          200:
+            description: "Project details"
+            schema: "Project"
+          404:
+            description: "Project not found"
+            
+      update_project:
+        method: "PUT"
+        path: "/{project_id}"
+        description: "Update project configuration"
+        parameters:
+          path:
+            project_id: "Unique project identifier"
+        request_body:
+          schema: "ProjectUpdateRequest"
+        responses:
+          200:
+            description: "Project updated"
+            schema: "Project"
+            
+      delete_project:
+        method: "DELETE"
+        path: "/{project_id}"
+        description: "Delete project configuration"
+        parameters:
+          path:
+            project_id: "Unique project identifier"
+        responses:
+          204:
+            description: "Project deleted"
+            
+      detect_project_type:
+        method: "POST"
+        path: "/{project_id}/detect"
+        description: "Detect and classify project type"
+        responses:
+          200:
+            description: "Project type detection results"
+            schema: "ProjectTypeDetection"
+            
+      get_project_config:
+        method: "GET"
+        path: "/{project_id}/config"
+        description: "Get project SEGA configuration"
+        responses:
+          200:
+            description: "Project configuration"
+            schema: "ProjectConfig"
+            
+      update_project_config:
+        method: "PUT"
+        path: "/{project_id}/config"
+        description: "Update project SEGA configuration"
+        request_body:
+          schema: "ProjectConfig"
+        responses:
+          200:
+            description: "Configuration updated"
+            schema: "ProjectConfig"
+
+  # Deployment Management
+  deployments:
+    base_path: "/api/v1/deployments"
+    
+    endpoints:
+      list_deployments:
+        method: "GET"
+        path: "/"
+        description: "List deployments with filtering"
+        parameters:
+          query:
+            project_id: "Filter by project"
+            status: "Filter by deployment status"
+            environment: "Filter by target environment"
+            start_date: "Filter by deployment start date"
+            end_date: "Filter by deployment end date"
+        responses:
+          200:
+            description: "List of deployments"
+            schema: "DeploymentList"
+            
+      create_deployment:
+        method: "POST"
+        path: "/"
+        description: "Trigger a new deployment"
+        request_body:
+          schema: "DeploymentCreateRequest"
+        responses:
+          202:
+            description: "Deployment started"
+            schema: "Deployment"
+            
+      get_deployment:
+        method: "GET"
+        path: "/{deployment_id}"
+        description: "Get deployment details and status"
+        parameters:
+          path:
+            deployment_id: "Unique deployment identifier"
+        responses:
+          200:
+            description: "Deployment details"
+            schema: "Deployment"
+            
+      cancel_deployment:
+        method: "POST"
+        path: "/{deployment_id}/cancel"
+        description: "Cancel an active deployment"
+        responses:
+          200:
+            description: "Deployment cancelled"
+            schema: "Deployment"
+            
+      rollback_deployment:
+        method: "POST"
+        path: "/{deployment_id}/rollback"
+        description: "Rollback to previous deployment"
+        responses:
+          202:
+            description: "Rollback initiated"
+            schema: "Deployment"
+            
+      get_deployment_logs:
+        method: "GET"
+        path: "/{deployment_id}/logs"
+        description: "Get deployment logs"
+        parameters:
+          query:
+            follow: "Stream logs in real-time"
+            lines: "Number of recent lines to return"
+        responses:
+          200:
+            description: "Deployment logs"
+            schema: "LogEntries"
+            
+      bulk_deploy:
+        method: "POST"
+        path: "/bulk"
+        description: "Deploy multiple projects"
+        request_body:
+          schema: "BulkDeploymentRequest"
+        responses:
+          202:
+            description: "Bulk deployment initiated"
+            schema: "BulkDeploymentResponse"
+
+  # Security Management
+  security:
+    base_path: "/api/v1/security"
+    
+    endpoints:
+      list_scans:
+        method: "GET"
+        path: "/scans"
+        description: "List security scans"
+        parameters:
+          query:
+            project_id: "Filter by project"
+            scan_type: "Filter by scan type"
+            status: "Filter by scan status"
+        responses:
+          200:
+            description: "List of security scans"
+            schema: "SecurityScanList"
+            
+      trigger_scan:
+        method: "POST"
+        path: "/scans"
+        description: "Trigger security scan"
+        request_body:
+          schema: "SecurityScanRequest"
+        responses:
+          202:
+            description: "Scan initiated"
+            schema: "SecurityScan"
+            
+      get_scan_results:
+        method: "GET"
+        path: "/scans/{scan_id}/results"
+        description: "Get security scan results"
+        parameters:
+          path:
+            scan_id: "Unique scan identifier"
+        responses:
+          200:
+            description: "Scan results"
+            schema: "SecurityScanResults"
+            
+      list_vulnerabilities:
+        method: "GET"
+        path: "/vulnerabilities"
+        description: "List vulnerabilities across portfolio"
+        parameters:
+          query:
+            severity: "Filter by severity level"
+            status: "Filter by remediation status"
+            project_id: "Filter by project"
+        responses:
+          200:
+            description: "List of vulnerabilities"
+            schema: "VulnerabilityList"
+            
+      update_vulnerability:
+        method: "PATCH"
+        path: "/vulnerabilities/{vuln_id}"
+        description: "Update vulnerability status"
+        request_body:
+          schema: "VulnerabilityUpdate"
+        responses:
+          200:
+            description: "Vulnerability updated"
+            schema: "Vulnerability"
+            
+      get_compliance_status:
+        method: "GET"
+        path: "/compliance"
+        description: "Get compliance status overview"
+        responses:
+          200:
+            description: "Compliance status"
+            schema: "ComplianceStatus"
+
+  # Infrastructure Management
+  infrastructure:
+    base_path: "/api/v1/infrastructure"
+    
+    endpoints:
+      list_resources:
+        method: "GET"
+        path: "/resources"
+        description: "List infrastructure resources"
+        parameters:
+          query:
+            provider: "Filter by cloud provider"
+            environment: "Filter by environment"
+            resource_type: "Filter by resource type"
+        responses:
+          200:
+            description: "List of infrastructure resources"
+            schema: "InfrastructureResourceList"
+            
+      get_resource_usage:
+        method: "GET"
+        path: "/usage"
+        description: "Get resource utilization metrics"
+        parameters:
+          query:
+            start_time: "Start time for metrics"
+            end_time: "End time for metrics"
+            granularity: "Metrics granularity (hour, day, week)"
+        responses:
+          200:
+            description: "Resource usage metrics"
+            schema: "ResourceUsageMetrics"
+            
+      get_cost_analysis:
+        method: "GET"
+        path: "/costs"
+        description: "Get cost analysis and breakdown"
+        parameters:
+          query:
+            start_date: "Start date for cost analysis"
+            end_date: "End date for cost analysis"
+            group_by: "Group costs by (project, environment, service)"
+        responses:
+          200:
+            description: "Cost analysis data"
+            schema: "CostAnalysis"
+
+  # Monitoring and Observability
+  monitoring:
+    base_path: "/api/v1/monitoring"
+    
+    endpoints:
+      get_health_status:
+        method: "GET"
+        path: "/health"
+        description: "Get overall system health"
+        responses:
+          200:
+            description: "System health status"
+            schema: "HealthStatus"
+            
+      list_alerts:
+        method: "GET"
+        path: "/alerts"
+        description: "List active alerts"
+        parameters:
+          query:
+            severity: "Filter by alert severity"
+            status: "Filter by alert status"
+            project_id: "Filter by project"
+        responses:
+          200:
+            description: "List of alerts"
+            schema: "AlertList"
+            
+      get_metrics:
+        method: "GET"
+        path: "/metrics"
+        description: "Get system and application metrics"
+        parameters:
+          query:
+            metric_name: "Specific metric to retrieve"
+            start_time: "Start time for metrics"
+            end_time: "End time for metrics"
+            step: "Metrics resolution step"
+        responses:
+          200:
+            description: "Metrics data"
+            schema: "MetricsData"
+            
+      get_logs:
+        method: "GET"
+        path: "/logs"
+        description: "Search and retrieve logs"
+        parameters:
+          query:
+            query: "Log search query"
+            start_time: "Start time for logs"
+            end_time: "End time for logs"
+            level: "Log level filter"
+            limit: "Maximum number of log entries"
+        responses:
+          200:
+            description: "Log entries"
+            schema: "LogEntries"
+
+# Data Schemas
+data_schemas:
+  
+  Project:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+        description: "Unique project identifier"
+      name:
+        type: "string"
+        description: "Project name"
+      description:
+        type: "string"
+        description: "Project description"
+      type:
+        type: "string"
+        enum: ["web_app", "ml_pipeline", "hybrid_system", "firmware_edge", "native_app"]
+      team:
+        type: "string"
+        description: "Owning team name"
+      repository:
+        $ref: "#/components/schemas/Repository"
+      status:
+        type: "string"
+        enum: ["active", "inactive", "archived"]
+      health_score:
+        type: "number"
+        description: "Project health score (0-100)"
+      created_at:
+        type: "string"
+        format: "date-time"
+      updated_at:
+        type: "string"
+        format: "date-time"
+        
+  Repository:
+    type: "object"
+    properties:
+      url:
+        type: "string"
+        description: "Git repository URL"
+      branch:
+        type: "string"
+        description: "Default branch"
+      provider:
+        type: "string"
+        enum: ["github", "gitlab", "bitbucket"]
+      last_commit:
+        $ref: "#/components/schemas/Commit"
+        
+  Commit:
+    type: "object"
+    properties:
+      sha:
+        type: "string"
+        description: "Commit SHA"
+      message:
+        type: "string"
+        description: "Commit message"
+      author:
+        type: "string"
+        description: "Commit author"
+      timestamp:
+        type: "string"
+        format: "date-time"
+        
+  Deployment:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+        description: "Unique deployment identifier"
+      project_id:
+        type: "string"
+        description: "Associated project ID"
+      environment:
+        type: "string"
+        description: "Target environment"
+      status:
+        type: "string"
+        enum: ["pending", "running", "succeeded", "failed", "cancelled"]
+      strategy:
+        type: "string"
+        enum: ["rolling", "blue_green", "canary"]
+      version:
+        type: "string"
+        description: "Deployment version/tag"
+      started_at:
+        type: "string"
+        format: "date-time"
+      completed_at:
+        type: "string"
+        format: "date-time"
+      duration:
+        type: "integer"
+        description: "Deployment duration in seconds"
+      triggered_by:
+        type: "string"
+        description: "User or system that triggered deployment"
+        
+  SecurityScan:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+        description: "Unique scan identifier"
+      project_id:
+        type: "string"
+        description: "Associated project ID"
+      scan_type:
+        type: "string"
+        enum: ["vulnerability", "dependency", "container", "infrastructure"]
+      status:
+        type: "string"
+        enum: ["pending", "running", "completed", "failed"]
+      started_at:
+        type: "string"
+        format: "date-time"
+      completed_at:
+        type: "string"
+        format: "date-time"
+      results_summary:
+        $ref: "#/components/schemas/ScanResultsSummary"
+        
+  ScanResultsSummary:
+    type: "object"
+    properties:
+      total_issues:
+        type: "integer"
+      critical:
+        type: "integer"
+      high:
+        type: "integer"
+      medium:
+        type: "integer"
+      low:
+        type: "integer"
+      info:
+        type: "integer"
+        
+  Vulnerability:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+        description: "Unique vulnerability identifier"
+      title:
+        type: "string"
+        description: "Vulnerability title"
+      description:
+        type: "string"
+        description: "Detailed description"
+      severity:
+        type: "string"
+        enum: ["critical", "high", "medium", "low", "info"]
+      cve_id:
+        type: "string"
+        description: "CVE identifier if applicable"
+      affected_component:
+        type: "string"
+        description: "Affected software component"
+      remediation:
+        type: "string"
+        description: "Remediation guidance"
+      status:
+        type: "string"
+        enum: ["open", "in_progress", "resolved", "false_positive", "accepted_risk"]
+      discovered_at:
+        type: "string"
+        format: "date-time"
+        
+  ProjectConfig:
+    type: "object"
+    properties:
+      version:
+        type: "string"
+        description: "SEGA configuration version"
+      project:
+        $ref: "#/components/schemas/ProjectMetadata"
+      components:
+        type: "array"
+        items:
+          $ref: "#/components/schemas/ComponentConfig"
+      build:
+        $ref: "#/components/schemas/BuildConfig"
+      deployment:
+        $ref: "#/components/schemas/DeploymentConfig"
+      security:
+        $ref: "#/components/schemas/SecurityConfig"
+      monitoring:
+        $ref: "#/components/schemas/MonitoringConfig"
+        
+  # Request/Response schemas
+  ProjectCreateRequest:
+    type: "object"
+    required: ["name", "type", "team"]
+    properties:
+      name:
+        type: "string"
+      description:
+        type: "string"
+      type:
+        type: "string"
+      team:
+        type: "string"
+      repository_url:
+        type: "string"
+        
+  DeploymentCreateRequest:
+    type: "object"
+    required: ["project_id", "environment"]
+    properties:
+      project_id:
+        type: "string"
+      environment:
+        type: "string"
+      strategy:
+        type: "string"
+      version:
+        type: "string"
+      auto_rollback:
+        type: "boolean"
+        
+  # Error schemas
+  Error:
+    type: "object"
+    properties:
+      error:
+        type: "string"
+        description: "Error code"
+      message:
+        type: "string"
+        description: "Human-readable error message"
+      details:
+        type: "object"
+        description: "Additional error details"
+      timestamp:
+        type: "string"
+        format: "date-time"
+        
+  ValidationError:
+    type: "object"
+    properties:
+      field:
+        type: "string"
+        description: "Field that failed validation"
+      message:
+        type: "string"
+        description: "Validation error message"
+      value:
+        description: "Invalid value that was provided"
+
+# WebSocket API
+websocket_api:
+  
+  connection:
+    url: "wss://api.sega.example.com/ws"
+    authentication: "JWT token in connection params"
+    
+  channels:
+    deployments:
+      subscribe: "deployment.{deployment_id}"
+      events:
+        - "deployment.started"
+        - "deployment.progress"
+        - "deployment.completed"
+        - "deployment.failed"
+        
+    portfolio:
+      subscribe: "portfolio.{user_id}"
+      events:
+        - "project.created"
+        - "project.updated"
+        - "project.deleted"
+        
+    security:
+      subscribe: "security.{project_id}"
+      events:
+        - "scan.started"
+        - "scan.completed"
+        - "vulnerability.discovered"
+        
+    monitoring:
+      subscribe: "monitoring.alerts"
+      events:
+        - "alert.triggered"
+        - "alert.resolved"
+        
+  message_format:
+    type: "object"
+    properties:
+      event:
+        type: "string"
+        description: "Event type"
+      channel:
+        type: "string"
+        description: "Channel identifier"
+      data:
+        type: "object"
+        description: "Event payload"
+      timestamp:
+        type: "string"
+        format: "date-time"
+
+# API Rate Limiting
+rate_limiting:
+  
+  limits:
+    default: "1000 requests/hour"
+    authenticated: "5000 requests/hour"
+    premium: "10000 requests/hour"
+    
+  headers:
+    limit: "X-RateLimit-Limit"
+    remaining: "X-RateLimit-Remaining"
+    reset: "X-RateLimit-Reset"
+    
+  response_codes:
+    exceeded: 429
+    
+  retry_after:
+    header: "Retry-After"
+    format: "seconds"
+
+# Error Handling
+error_handling:
+  
+  error_codes:
+    400: "Bad Request - Invalid parameters or request body"
+    401: "Unauthorized - Authentication required or invalid"
+    403: "Forbidden - Insufficient permissions"
+    404: "Not Found - Resource does not exist"
+    409: "Conflict - Resource conflict (e.g., duplicate name)"
+    422: "Unprocessable Entity - Validation errors"
+    429: "Too Many Requests - Rate limit exceeded"
+    500: "Internal Server Error - Unexpected server error"
+    502: "Bad Gateway - Upstream service error"
+    503: "Service Unavailable - Service temporarily unavailable"
+    
+  error_response_format:
+    type: "object"
+    properties:
+      error:
+        type: "object"
+        properties:
+          code:
+            type: "string"
+            description: "Machine-readable error code"
+          message:
+            type: "string"
+            description: "Human-readable error message"
+          details:
+            type: "array"
+            items:
+              type: "object"
+            description: "Additional error details"
+          request_id:
+            type: "string"
+            description: "Unique request identifier for support"
+
+# API Versioning
+versioning:
+  
+  strategy: "URL path versioning"
+  current_version: "v1"
+  deprecation_policy: "6 months notice for breaking changes"
+  
+  version_header: "Accept: application/vnd.sega.v1+json"
+  
+  backwards_compatibility:
+    duration: "12 months for major versions"
+    migration_guides: "Provided for all breaking changes"
+    
+# SDK and Client Libraries
+sdk_support:
+  
+  official_sdks:
+    python:
+      package: "sega-python-sdk"
+      version: "1.0.0"
+      pypi: "https://pypi.org/project/sega-python-sdk/"
+      
+    javascript:
+      package: "@example-org/sega-sdk"
+      version: "1.0.0"
+      npm: "https://www.npmjs.com/package/@example-org/sega-sdk"
+      
+    go:
+      package: "github.com/example-org/sega-go"
+      version: "v1.0.0"
+      
+  community_sdks:
+    rust: "Community-maintained Rust SDK"
+    java: "Community-maintained Java SDK"
+    
+# OpenAPI Specification
+openapi_spec:
+  version: "3.0.3"
+  location: "https://api.sega.example.com/openapi.json"
+  ui: "https://api.sega.example.com/docs"
+  redoc: "https://api.sega.example.com/redoc"
+  
+# GraphQL API
+graphql_api:
+  
+  endpoint: "https://api.sega.example.com/graphql"
+  playground: "https://api.sega.example.com/graphql-playground"
+  
+  capabilities:
+    - "Complex nested queries"
+    - "Real-time subscriptions"
+    - "Field-level permissions"
+    - "Query complexity analysis"
+    
+  example_queries:
+    portfolio_overview: |
+      query PortfolioOverview {
+        portfolio {
+          totalProjects
+          healthScore
+          projects(first: 10) {
+            edges {
+              node {
+                id
+                name
+                type
+                healthScore
+                lastDeployment {
+                  status
+                  completedAt
+                }
+              }
+            }
+          }
+        }
+      }
+      
+    deployment_details: |
+      query DeploymentDetails($deploymentId: ID!) {
+        deployment(id: $deploymentId) {
+          id
+          status
+          environment
+          startedAt
+          completedAt
+          project {
+            name
+            team
+          }
+          logs {
+            entries {
+              timestamp
+              level
+              message
+            }
+          }
+        }
+      }
+
+# Testing and Development
+api_testing:
+  
+  test_environment:
+    base_url: "https://api-staging.sega.example.com"
+    authentication: "Test API keys available"
+    data: "Sample portfolio data for testing"
+    
+  postman_collection:
+    url: "https://documenter.getpostman.com/view/sega-api"
+    environment: "Available for staging and production"
+    
+  curl_examples:
+    authentication: |
+      # Get access token
+      curl -X POST https://auth.example.com/oauth/token \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d "grant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET"
+        
+    list_projects: |
+      # List projects
+      curl -X GET https://api.sega.example.com/api/v1/portfolio/projects \
+        -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+        -H "Accept: application/json"
+        
+    create_deployment: |
+      # Create deployment
+      curl -X POST https://api.sega.example.com/api/v1/deployments \
+        -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "project_id": "proj_123",
+          "environment": "staging",
+          "strategy": "rolling"
+        }'
+
+# API Documentation
+documentation:
+  
+  interactive_docs:
+    swagger_ui: "https://api.sega.example.com/docs"
+    redoc: "https://api.sega.example.com/redoc"
+    
+  guides:
+    getting_started: "https://docs.example.com/sega/api/getting-started"
+    authentication: "https://docs.example.com/sega/api/authentication"
+    rate_limiting: "https://docs.example.com/sega/api/rate-limiting"
+    webhooks: "https://docs.example.com/sega/api/webhooks"
+    
+  code_samples:
+    languages: ["curl", "python", "javascript", "go"]
+    use_cases: ["Portfolio management", "Deployment automation", "Security monitoring"]
+    
+# Support and Community
+api_support:
+  
+  channels:
+    documentation: "https://docs.example.com/sega/api"
+    github_issues: "https://github.com/example-org/sega/issues"
+    slack: "#sega-api-support"
+    email: "api-support@example.com"
+    
+  sla:
+    uptime: "99.9%"
+    response_time: "< 200ms for 95th percentile"
+    support_response: "< 24 hours for API issues"

@@ -1,0 +1,40 @@
+[Unit]
+Description=SEGA {{PROJECT_NAME}} Backend API - port {{PORT}}
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+PartOf=sega-{{PROJECT_NAME}}.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory={{FLEET_ROOT}}/{{PROJECT_NAME}}/backend
+Environment=ENVIRONMENT=production
+Environment=PORT={{PORT}}
+
+# Start FastAPI via uvicorn
+ExecStart=/home/ubuntu/.local/bin/uvicorn {{MODULE}}:app --host 0.0.0.0 --port {{PORT}} --workers 2
+
+# Graceful reload (picks up new workers without dropping connections)
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy - recover automatically on crash
+Restart=always
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=5
+
+# Resource limits
+MemoryMax=2G
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sega-{{PROJECT_NAME}}-backend
+
+[Install]
+WantedBy=multi-user.target

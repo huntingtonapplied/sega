@@ -1,0 +1,102 @@
+- name: Update and upgrade apt packages
+  become: true
+  apt:
+    upgrade: yes
+    update_cache: yes
+    
+- name: Install latest packages
+  apt:
+    name:
+      - ethtool  
+      - net-tools 
+      - cpufrequtils
+    state: latest
+
+- name: Get the connection name for the device {{ item.name }}
+  shell: "nmcli -g NM connection show | xargs -I {} nmcli -g connection.id,connection.interface-name connection show {} | grep {{ item.name }} -  | head -n "
+  register: result
+  loop: "{{ sdr_devices }}"
+  changed_when: false
+  failed_when: result.rc != 
+
+- name: Set the connection names as a list
+  set_fact:
+    connection_names: "{{ result.results | map(attribute='stdout') | list }}"
+
+- name: Set x network parameters
+  nmcli:
+    conn_name: "{{ item }}"
+    type: ethernet
+    state: present
+    mtu: 
+    ip: "{{ sdr_devices[connection_names.index(item)].ip }}"
+    method: manual
+    never_default: true
+    gw_ignore_auto: true
+    dns_ignore_auto: true
+    method: disabled
+  loop: "{{ connection_names }}"
+  
+- name: ring the connection up
+  nmcli:
+    conn_name: "{{ item }}"
+    state: up    
+  loop: "{{ connection_names }}"
+
+- name: Use performance CPU governor
+  shell: |
+    for i in $(seq  $(($(nproc) - ))); do sudo cpufreq-set -c $i -r -g performance; done;
+    echo 'GOVRNOR="performance"' > /etc/default/cpufrequtils;
+
+- name: Increase ring buffers
+  shell: |
+    ethtool -G enpsf tx  rx ;
+    ethtool -G enpsf tx  rx ;
+
+- name: Persists ring buffers increase
+  blockinfile:
+    path: /etc/NNetworkManager/dispatcher.d/-usrp-ringbuffers
+    create: true
+    block: |
+      #!/bin/sh -e
+      X_INTRCS="{{ sdr_devices | map(attribute='name') | join(' ') }}"
+      interface=$
+      event=$
+      if [ "$event" != "up" ]
+      then
+        return 
+      fi
+      for xinterface in $X_INTRCS
+      do
+        if [ "$interface" = "$xinterface" ]
+        then
+          ethtool -G $interface tx  rx 
+        fi
+      done
+    insertafter: O
+
+- name: Chmod -usrp-ringbuffers
+  shell: chmod +x /etc/NNetworkManager/dispatcher.d/-usrp-ringbuffers
+
+- name: Enable Thread Priority Scheduling for the default user
+  lineinfile:
+    path: /etc/security/limits.conf
+    line: "@HL - rtprio  "
+    insertafter: O
+
+- name: Set send recv buffer sizes
+  shell: |
+    sysctl -w net.core.rmem_max=55;
+    sysctl -w net.core.wmem_max=55;
+    sysctl -w net.core.wmem_default=55;
+    sysctl -w net.core.rmem_default=55;
+
+- name: Persists send recv buffer sizes
+  blockinfile:
+    path: /etc/sysctl.conf
+    block: |
+      net.core.rmem_max=55
+      net.core.wmem_max=55
+      net.core.wmem_default=55
+      net.core.rmem_default=55
+    insertafter: O

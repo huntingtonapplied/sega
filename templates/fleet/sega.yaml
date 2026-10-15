@@ -1,0 +1,116 @@
+# SEGA Project Configuration Template for Example projects
+# This is a working template without Jinja2 variables
+
+project:
+  name: "project-name"
+  type: "web_app"
+  domain: "example"
+  team: "example"
+  description: "Example project configuration"
+
+metadata:
+  ownership:
+    owner: "team@example.com"
+    created_date: "2025-01-01"
+    last_updated: "2025-01-01"
+    criticality: "medium"
+    classification: "internal"
+
+build:
+  strategy: "containerized"
+  
+  commands:
+    development: "npm run build:dev"
+    staging: "npm run build:staging"
+    production: "npm run build:prod"
+  
+  docker:
+    context: "."
+    dockerfile: "Dockerfile"
+    registry: "ecr"
+    
+  environment:
+    variables:
+      - key: "TEAM"
+        value: "example"
+      - key: "PROJECT"
+        value: "project-name"
+
+deployment:
+  targets:
+    production:
+      cluster: "example-production"
+      namespace: "production"
+      
+      infrastructure:
+        cpu: 2
+        memory: 4096
+        storage: "10Gi"
+        
+      networking:
+        port: 8080
+        health_check_path: "/health"
+        load_balancer: true
+        
+      scaling:
+        min_instances: 2
+        max_instances: 10
+
+testing:
+  types:
+    - "unit"
+    - "integration"
+    - "security"
+    - "e2e"
+    
+  commands:
+    unit: "npm test"
+    integration: "npm run test:integration"
+    security: "npm audit"
+    e2e: "npm run test:e2e"
+    
+  requirements:
+    coverage_threshold: 80
+    security_threshold: "medium"
+
+security:
+  vulnerability_scanning:
+    enabled: true
+    schedule: "daily"
+    
+  compliance:
+    data_classification: "internal"
+    
+  monitoring:
+    threat_model: "web_aApplication"
+    
+  incident_response: "security@example.com"
+
+monitoring:
+  metrics:
+    enabled: true
+    namespace: "example.project.metrics"
+    
+  alerting:
+    channels:
+      - type: "slack"
+        notification: "slack://team-alerts"
+      - type: "email"
+        notification: "email://team@example.com"
+
+integration:
+  gitlab:
+    project_id: "12345"
+    
+  aws:
+    account_id: "123456789012"
+    
+  slack:
+    channel: "team-notifications"
+
+# Project type specific configurations can be added here
+web_app:
+  framework: "react"
+  api_framework: "express"
+  database: "postgresql"
+  cache: "redis"

@@ -1,0 +1,44 @@
+{{- $ns := include "fleet-project.namespace" . -}}
+{{- if .Values.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "fleet-project.serviceAccountName" . }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" . | nindent 4 }}
+{{- end }}
+{{- if .Values.rbac.create }}
+---
+# Worker lists pods/configmaps — K8sAdapter.get_worker_status (k8s_adapter.py:213-217).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "fleet-project.name" . }}-worker-role
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "fleet-project.name" . }}-worker-rolebinding
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "fleet-project.serviceAccountName" . }}
+    namespace: {{ $ns }}
+roleRef:
+  kind: Role
+  name: {{ include "fleet-project.name" . }}-worker-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

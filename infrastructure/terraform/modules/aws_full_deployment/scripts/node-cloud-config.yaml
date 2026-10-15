@@ -1,0 +1,7 @@
+#cloud-config
+system_info:
+  default_user:
+    name: HL
+    gecos: HL
+preserve_hostname: false
+hostname: ${hostname}

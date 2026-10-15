@@ -1,0 +1,12 @@
+#cloud-config
+system_info:
+  default_user:
+    name: HL
+    gecos: HL
+preserve_hostname: false
+hostname: ${hostname}
+write_files:
+  - path: /etc/environment
+    append: true
+    content: |
+      XTRMIS_DSR_S_UCKT=${s_bucket_name}

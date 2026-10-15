@@ -1,0 +1,6 @@
+- name: dd SSH keys
+  authorized_key:
+    user: "{{ ansible_user }}"
+    state: present
+    key: "{{ lookup('pipe', 'aws secretsmanager get-secret-value --secret-id ' + item + ' --query SecretString --output text') }}"
+  with_items: "{{ ssh_authorized_key_names }}"

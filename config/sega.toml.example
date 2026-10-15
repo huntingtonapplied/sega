@@ -1,0 +1,675 @@
+# SEGA Central Configuration — EXAMPLE
+#
+# Copy to config/sega.toml (or point SEGA_CONFIG_PATH at it) and replace the
+# fictional fleet below with your own projects, instances, and domains.
+#
+# This example describes a small fictional fleet of three sibling services
+# ("atlas", "hermes", "orion") on two servers. Every port is computed from the
+# project `id` — allocate ids once and the whole port map follows.
+#
+# PORT CALCULATION FORMULAS:
+# - api_port = 8000 + project_id
+# - frontend_port = 3000 + project_id
+# - product_app_port = 4000 + project_id
+# - desktop_port = 3300 + project_id
+# - mobile_port = 19000 + project_id
+# - database_port = 5000 + project_id
+# - redis_port = 6000 + project_id
+# - metrics_port = 9000 + project_id
+# - grpc_port = api_port + 100
+# - admin_port = api_port + 200
+# - test_port = production_port + 20000
+
+# Projects treated as core infrastructure — errors in these escalate to ERROR
+# severity in ecosystem reports. Leave empty if no project is load-bearing.
+critical_projects = []
+
+[meta]
+version = "1.0.0"
+ecosystem = "example"
+description = "SEGA Central Configuration - example 3-project fleet"
+
+# =============================================================================
+# INSTANCES — the servers your fleet deploys to (any number, any names)
+# =============================================================================
+
+[instances.prod-01]
+ip = "203.0.113.10"
+ssh_user = "ubuntu"
+ssh_key_path = "~/.ssh/id_rsa"
+projects = ["atlas", "hermes"]
+note = "Primary application server"
+
+[instances.prod-02]
+ip = "203.0.113.20"
+ssh_user = "ubuntu"
+ssh_key_path = "~/.ssh/id_rsa"
+projects = ["orion"]
+note = "Simulation workloads"
+
+# =============================================================================
+# TELEMETRY BACKEND INTEGRATION (optional)
+# =============================================================================
+# SEGA can report metrics to a telemetry backend via a private plug-in.
+# The open-source core ships a no-op reporter; leave disabled unless you
+# provide your own implementation.
+
+[telemetry]
+api_port = 8003
+metrics_port = 9003
+tcp_protobuf_port = 3308
+enabled = false
+
+# =============================================================================
+# PROJECTS — one section per sibling service in your fleet
+# =============================================================================
+# Engine Types: simulation | workflow | utility | function_library | none
+# deployment_target: an [instances.*] name, "local", or "not_served"
+
+# -----------------------------------------------------------------------------
+# Project ID 0: Atlas
+# Ports: API=8000, Frontend=3000, Database=5000, Redis=6000, Metrics=9000
+# -----------------------------------------------------------------------------
+[projects.atlas]
+id = 0
+engine_type = "none"
+deployment_target = "prod-01"
+has_frontend = true
+has_mobile = false
+has_desktop = false
+description = "Customer-facing web application"
+
+# -----------------------------------------------------------------------------
+# Project ID 1: Hermes
+# Ports: API=8001, Frontend=3001, Database=5001, Redis=6001, Metrics=9001
+# -----------------------------------------------------------------------------
+[projects.hermes]
+id = 1
+engine_type = "workflow"
+deployment_target = "prod-01"
+has_frontend = false
+has_mobile = false
+has_desktop = false
+description = "Background job and workflow service"
+
+# -----------------------------------------------------------------------------
+# Project ID 2: Orion
+# Ports: API=8002, Frontend=3002, Database=5002, Redis=6002, Metrics=9002
+# -----------------------------------------------------------------------------
+[projects.orion]
+id = 2
+engine_type = "simulation"
+deployment_target = "prod-02"
+has_frontend = true
+has_mobile = false
+has_desktop = true
+# Set when a project's frontend consumes shared modules built once and reused
+# across the fleet (enables shared-module staging during local orchestration).
+has_shared_frontend_modules = false
+description = "Simulation engine with desktop client"
+
+# =============================================================================
+# BUILD REGISTRIES (curated build sets for `sega binaries`)
+# =============================================================================
+# Membership here is authoritative — it is NOT derived from project flags.
+# Paths are relative to the workspace root (SEGA_FLEET_ROOT).
+
+[build]
+# Desktop projects (Electron applications) — curated build set.
+desktop = ["orion"]
+
+# IDE projects (VS Code fork builds). Leave empty if unused.
+ide = []
+
+# Binary projects (CLI tools): project -> build language ("python" = Nuitka,
+# "rust" = cargo).
+[build.binary]
+# hermes = "python"
+
+# CLI project configuration (projects with dedicated CLI entry points).
+# cli_dir/source_dir are relative to the workspace root.
+# [build.cli.hermes]
+# cli_dir = "hermes/cli"
+# package_name = "hermes_cli"
+# binary_name = "hermes"
+# install_script = "install.sh"
+# source_dir = "hermes/cli"
+
+# Engine projects — obfuscated, downloadable engine packages.
+# [build.engine.orion]
+# engine_dir = "orion/engine"
+# package = "orion"
+# tool = "python"
+
+# =============================================================================
+# DISTRIBUTION & PACKAGING DEFAULTS
+# =============================================================================
+# Per-project overrides go in each project's sega.yaml file
+
+[distribution]
+# Build mode: 'standalone' for desktop/CLI, 'cloud' for infrastructure
+default_mode = "cloud"
+# GitHub org used for release distribution ("" = not configured)
+github_org = ""
+
+# Feature exclusions applied when mode=standalone
+# These features are compile-time excluded from packaged builds
+[distribution.exclusions]
+telemetry_reporter = true    # Exclude telemetry metrics client (no central metrics in offline mode)
+cloud_telemetry = true       # Exclude cloud telemetry endpoints
+remote_job_client = false    # Keep for sync functionality (set true for fully offline)
+
+# =============================================================================
+# CODE PROTECTION
+# =============================================================================
+
+[protection.python]
+enabled = true
+tool = "nuitka"
+options = "--standalone --onefile"
+# Environment vars set during standalone builds
+[protection.python.standalone_env]
+STANDALONE_BUILD = "true"
+TELEMETRY_ENABLED = "false"
+
+[protection.node]
+enabled = true
+tool = "bytenode"  # V8 bytecode compilation
+options = "--compress"
+# Webpack defines for standalone builds
+[protection.node.standalone_defines]
+STANDALONE_BUILD = "true"
+TELEMETRY_ENABLED = "false"
+
+[protection.js]
+enabled = false
+tool = "javascript-obfuscator"  # For function libraries
+options = "--compact true --self-defending true"
+
+[protection.rust]
+enabled = true  # Native binary, no additional protection needed
+standalone_features = ["standalone"]
+exclude_default_features = true
+
+# =============================================================================
+# DESKTOP PACKAGING (ELECTRON)
+# =============================================================================
+
+[packaging.desktop]
+enabled = true
+electron_builder = true
+template = "docs/templates/desktop/electron_base"
+platforms = ["mac", "win", "linux"]
+
+[packaging.desktop.signing.mac]
+identity = "Developer ID Application: Your Company"
+notarize = true
+
+[packaging.desktop.signing.win]
+certificate = "${WINDOWS_CERT_PATH}"
+timestamp = "http://timestamp.digicert.com"
+
+[packaging.desktop.signing.linux]
+gpg_key = "${GPG_KEY_ID}"
+
+# =============================================================================
+# MOBILE PACKAGING (EXPO)
+# =============================================================================
+
+[packaging.mobile]
+enabled = false
+expo = true
+template = "docs/templates/mobile"
+platforms = ["ios", "android"]
+
+[packaging.mobile.signing.ios]
+provisioning = "${IOS_PROVISIONING_PROFILE}"
+certificate = "${IOS_DISTRIBUTION_CERT}"
+
+[packaging.mobile.signing.android]
+keystore = "${ANDROID_KEYSTORE_PATH}"
+key_alias = "${ANDROID_KEY_ALIAS}"
+
+# =============================================================================
+# IDE PACKAGING (VS CODE FORK)
+# =============================================================================
+
+[packaging.ide]
+enabled = false
+template = "docs/templates/IDE/vscode"
+build_system = "gulp"
+platforms = ["mac", "win", "linux"]
+
+# =============================================================================
+# VS CODE EXTENSION PACKAGING
+# =============================================================================
+
+[packaging.extension]
+enabled = false
+tool = "vsce"
+output = ".vsix"
+
+# =============================================================================
+# CLI DISTRIBUTION
+# =============================================================================
+
+[packaging.cli]
+enabled = false
+formats = ["binary", "cargo", "pip"]
+platforms = ["mac", "win", "linux"]
+
+# =============================================================================
+# SIGNING CONFIGURATION
+# =============================================================================
+
+[signing]
+# macOS signing
+[signing.mac]
+identity_env = "MAC_SIGNING_IDENTITY"
+apple_id_env = "APPLE_ID"
+apple_password_env = "APPLE_APP_SPECIFIC_PASSWORD"
+team_id_env = "APPLE_TEAM_ID"
+
+# Windows signing
+[signing.win]
+cert_path_env = "WINDOWS_CERT_PATH"
+cert_password_env = "WINDOWS_CERT_PASSWORD"
+
+# Linux signing
+[signing.linux]
+gpg_key_env = "GPG_KEY_ID"
+gpg_passphrase_env = "GPG_PASSPHRASE"
+
+# =============================================================================
+# DISTRIBUTION TARGETS
+# =============================================================================
+
+[distribution.s3]
+bucket = "releases"
+region = "us-east-1"
+access_key_env = "AWS_ACCESS_KEY_ID"
+secret_key_env = "AWS_SECRET_ACCESS_KEY"
+
+[distribution.vsce]
+pat_env = "VSCE_PAT"  # Personal Access Token for VS Code Marketplace
+
+# =============================================================================
+# INFRASTRUCTURE CONFIGURATION
+# =============================================================================
+# Unified server, frontend orchestration, routing, monitoring, security, logging
+
+# -----------------------------------------------------------------------------
+# Shared Environments - Paths for shared dependency mode
+# -----------------------------------------------------------------------------
+[infrastructure.shared_environments]
+root = "${FLEET_ROOT}/environments"
+node_modules = "${FLEET_ROOT}/environments/node_modules"
+backend_venv = "${FLEET_ROOT}/environments/backend_venv"
+engine_venv = "${FLEET_ROOT}/environments/engine_venv"
+ide_node_modules = "${FLEET_ROOT}/environments/ide/node_modules"
+package_json = "${FLEET_ROOT}/environments/package.json"
+ide_package_json = "${FLEET_ROOT}/environments/ide/package.json"
+
+# -----------------------------------------------------------------------------
+# Shared Infrastructure - Database and cache for --shared mode
+# -----------------------------------------------------------------------------
+# When using `sega local up --shared`, infrastructure runs locally:
+# - Redis: Native redis-server on the formula port (6000 + project_id)
+# - PostgreSQL: Docker TimescaleDB container on the formula port (5000 + project_id)
+#
+# Container naming: {project}-db-shared (e.g., atlas-db-shared)
+
+[infrastructure.shared_infrastructure]
+root = "${FLEET_ROOT}/environments/infrastructure"
+redis_type = "native"           # Native redis-server (can bind to any port)
+postgres_type = "docker"        # Docker container (for custom ports)
+postgres_image = "timescale/timescaledb:latest-pg15"
+container_suffix = "-db-shared"
+
+[infrastructure.shared_infrastructure.redis]
+data_dir = "${FLEET_ROOT}/environments/infrastructure/redis/data"
+log_dir = "${FLEET_ROOT}/environments/infrastructure/redis/logs"
+pid_dir = "${FLEET_ROOT}/environments/infrastructure/redis/run"
+
+[infrastructure.shared_infrastructure.postgres]
+data_dir = "${FLEET_ROOT}/environments/infrastructure/postgres/data"
+
+# -----------------------------------------------------------------------------
+# Frontend Orchestration - Build and serve configuration
+# -----------------------------------------------------------------------------
+[infrastructure.frontend_orchestration]
+default_mode = "shared"  # 'shared' uses the shared environments root, 'isolated' uses project node_modules
+
+[infrastructure.frontend_orchestration.build]
+command = "npm run build"
+output_dir = ".next"
+timeout = 300  # 5 minutes per project
+
+[infrastructure.frontend_orchestration.serve]
+command = "npm run start"
+dev_command = "npm run dev"
+health_check_path = "/"
+startup_timeout = 30
+
+[infrastructure.frontend_orchestration.parallel]
+max_concurrent = 4
+stagger_delay = 2
+
+# -----------------------------------------------------------------------------
+# Unified Server - Nginx reverse proxy configuration
+# -----------------------------------------------------------------------------
+[infrastructure.unified_server]
+name = "unified-server"
+description = "Single-server deployment for multiple fleet projects"
+strategy = "reverse-proxy"
+domain = "example.local"
+
+[infrastructure.unified_server.ssl]
+enabled = false
+cert_path = "/etc/ssl/certs/fleet.crt"
+key_path = "/etc/ssl/private/fleet.key"
+
+[infrastructure.unified_server.reverse_proxy]
+type = "nginx"
+config_path = "/etc/nginx/sites-available"
+enabled_path = "/etc/nginx/sites-enabled"
+service_name = "nginx"
+proxy_connect_timeout = "60s"
+proxy_send_timeout = "60s"
+proxy_read_timeout = "60s"
+
+[infrastructure.unified_server.static_files]
+enabled = true
+root_path = "/var/www/fleet"
+assets_path = "/var/www/fleet/assets"
+
+# -----------------------------------------------------------------------------
+# Routing - URL routing strategies
+# -----------------------------------------------------------------------------
+[infrastructure.routing.subdomain]
+enabled = true
+pattern = "{service}-{type}.{domain}"
+
+[infrastructure.routing.path]
+enabled = true
+api_prefix = "/api"
+mobile_prefix = "/mobile"
+desktop_prefix = "/desktop"
+
+[infrastructure.routing.port]
+enabled = false
+base_domain = "localhost"
+
+# -----------------------------------------------------------------------------
+# Monitoring - Health checks and project monitoring
+# -----------------------------------------------------------------------------
+[infrastructure.monitoring]
+enabled = true
+health_check_path = "/health"
+health_check_interval = "30s"
+
+[infrastructure.monitoring.project_health]
+enabled = true
+check_services = ["api", "frontend"]
+timeout = "10s"
+
+# -----------------------------------------------------------------------------
+# Security - Rate limiting, CORS, headers
+# -----------------------------------------------------------------------------
+[infrastructure.security.rate_limiting]
+enabled = true
+requests_per_minute = 100
+burst_size = 20
+
+[infrastructure.security.cors]
+enabled = true
+allowed_origins = ["*"]
+allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+allowed_headers = ["*"]
+
+[infrastructure.security]
+headers = [
+    "X-Frame-Options DENY",
+    "X-Content-Type-Options nosniff",
+    "X-XSS-Protection 1; mode=block",
+    "Referrer-Policy strict-origin-when-cross-origin",
+]
+
+# -----------------------------------------------------------------------------
+# Logging - Access/error logs and rotation
+# -----------------------------------------------------------------------------
+[infrastructure.logging]
+access_log = "/var/log/nginx/fleet_access.log"
+error_log = "/var/log/nginx/fleet_error.log"
+format = "combined"
+
+[infrastructure.logging.rotation]
+enabled = true
+retention_days = 30
+compress = true
+
+# =============================================================================
+# SYSTEM TYPES (Machine Configuration)
+# =============================================================================
+# Used by: sega install target --target <type>
+# Ansible roles: infrastructure/ansible/roles/
+
+[system_types.mac-dev]
+description = "Standard macOS development environment"
+os_types = ["macos"]
+vpn_mode = "client"
+security_profile = "development"
+ansible_roles = ["install_packages", "openvpn_client"]
+
+[system_types.linux-dev]
+description = "Standard Linux development environment"
+os_types = ["ubuntu", "linux"]
+vpn_mode = "client"
+security_profile = "development"
+ansible_roles = ["install_packages", "openvpn_client"]
+
+[system_types.server]
+description = "Full production server with VPN hub"
+os_types = ["ubuntu", "linux"]
+vpn_mode = "server"
+security_profile = "production"
+ansible_roles = ["install_packages", "add_data_volume", "openvpn_server", "configure_monitoring", "configure_firewall"]
+
+# =============================================================================
+# CLOUDFLARE INTEGRATION (optional)
+# =============================================================================
+# Supports DNS record management, Cloudflare Tunnels, and dynamic DNS.
+#
+# Environment Variables:
+# - CF_API_TOKEN: Cloudflare API token (Zone:DNS:Edit permissions)
+# - CF_ZONE_ID: Cloudflare Zone ID (optional, auto-detected from domain)
+
+[cloudflare]
+enabled = false
+api_token = "env:CF_API_TOKEN"
+zone_id = ""  # Your Cloudflare zone ID
+
+# Cloudflare Tunnels for local deployments
+# [[cloudflare.tunnels]]
+# name = "homelab"
+# host = "homelab.local"   # Local hostname or IP
+# user = "deploy"          # SSH user
+#
+#   [[cloudflare.tunnels.routes]]
+#   project = "atlas"
+#   domain = "staging.atlas.example.com"
+#   local_port = 3000
+#   protocol = "http"
+
+# Dynamic DNS configuration
+# [[cloudflare.ddns]]
+# domain = "home.yourdomain.com"
+# check_interval = 300  # seconds
+
+# =============================================================================
+# LOCAL HOSTS (optional)
+# =============================================================================
+# Non-cloud hosts (a Mac mini, a home server) usable as deployment targets:
+#   sega deploy atlas --target homelab
+
+# [local_hosts.homelab]
+# ip = "homelab.local"
+# user = "deploy"
+# type = "mac_mini"
+# ram_gb = 32
+# storage_gb = 500
+# ssh_key_path = "~/.ssh/id_rsa"  # Optional, uses default SSH key
+# enabled = true
+
+# =============================================================================
+# DOMAINS — per-project public hostnames (prod + optional dev/staging)
+# =============================================================================
+# Read via config.get_domain(project, env="prod"|"dev").
+
+[domains]
+atlas = { prod = "atlas.example.com", dev = "staging.atlas.example.com" }
+hermes = { prod = "hermes.example.com" }
+orion = { prod = "orion.example.com", dev = "staging.orion.example.com" }
+
+# =============================================================================
+# FLEET OPERATIONS DATA (optional — safe to leave empty)
+# =============================================================================
+# Operator-curated project subsets and legacy per-deployment data that match no
+# config predicate. Every key is optional and defaults to empty; the engine
+# behaves sanely without them. Read via config.fleet.*.
+
+[fleet]
+# Default project set for registry-based deployment (`sega ship` registry mode).
+registry_projects = []
+# Presentation/priority order for `sega local open` browser opening.
+web_priority = []
+# Core application project set (mobile builds, probe/browser tests, ecosystem
+# health ports, `secrets apply --project all`).
+app_projects = []
+# Default project set for API test runs / OpenAPI discovery.
+api_test_projects = []
+# Project set for the probe backend-test fallback config.
+probe_fallback_projects = []
+# Projects whose frontend package.json files are merged into the shared env.
+frontend_merge_projects = []
+# Default project for the standalone structured test reporter CLI.
+default_probe_project = ""
+# Project that hosts the fleet telemetry/metrics backend ("" = none).
+telemetry_project = ""
+# Workspace-relative path of the shared frontend-modules setup script ("" = none).
+shared_setup_script = ""
+# Workspace-relative candidate paths for the projects-registry JSON.
+project_registry_paths = []
+# Workspace-relative catalog paths (model zoo / engine catalog; "" = default).
+model_zoo_path = ""
+engine_catalog_path = ""
+# Ordered [path_prefix, label] pairs for sysnc conflict categorization.
+sysnc_categories = []
+
+# Deployment-ordering tiers (deployed in declaration order), e.g.:
+# [fleet.deployment_tiers]
+# infrastructure = ["atlas"]
+# services = ["hermes"]
+# applications = ["orion"]
+
+# Legacy per-project port maps for the enhanced local manager (api/frontend
+# usually mirror the standard formulas; expo_web/desktop are curated), e.g.:
+# [fleet.port_allocations]
+# atlas = { api = 8000, frontend = 3000, expo_web = 19000, desktop = 3300 }
+
+# Instance scan groups for `sega local open --scan --remote N`, e.g.:
+# [fleet.scan_groups]
+# group1 = ["atlas"]
+# group2 = ["hermes", "orion"]
+
+# Probe project categories (unlisted projects default to "infrastructure"), e.g.:
+# [fleet.project_categories]
+# atlas = "ml"
+
+# Legacy browser-test frontend port overrides, e.g.:
+# [fleet.browser_test_ports]
+# atlas = 3100
+
+# Conflict-analysis project groups for the sysnc tooling, e.g.:
+# [fleet.sysnc_groups]
+# group1 = ["atlas"]
+# group2 = ["hermes"]
+
+# Where generated data-catalog frontends are written, e.g.:
+# [fleet.data_frontend_outputs]
+# atlas = "atlas/frontend/landing_app/src/components/Pages/Data/dataProductsData.ts"
+
+# =============================================================================
+# SECRET-TO-PROJECT MAPPINGS (optional — safe to leave empty)
+# =============================================================================
+# Which secret keys each project consumes. Read via config.secrets.*.
+# All maps default to empty: the secrets commands then simply manage no
+# per-project keys until you configure them.
+
+# Extra {SECRET_KEY = "group"} entries merged over the built-in platform map, e.g.:
+# [secrets.key_groups]
+# MY_MARKET_API_KEY = "atlas"
+
+# {project = [secret key names]} for the social secrets manager, e.g.:
+# [secrets.social_project_mappings]
+# atlas = ["TWITTER_API_KEY", "TWITTER_API_SECRET"]
+
+# {project = [required secret key names]} for validation, e.g.:
+# [secrets.project_required]
+# atlas = ["OPENAI_API_KEY"]
+
+# =============================================================================
+# ENGINE DEPLOYMENT REGISTRY (optional — safe to leave empty)
+# =============================================================================
+# Per-engine deployment metadata for `sega infrastructure engine ...`.
+# endpoints values are URL templates formatted with {host}. E.g.:
+#
+# [engines.atlas]
+# image = "your-org/atlas:latest"
+# ports = [8100, 8101]
+# capabilities = ["simulation"]
+# resources = { cpu = 4, memory = "8Gi", gpu = false }
+# env = { ATLAS_MODE = "engine" }
+# endpoints = { api = "http://{host}:8100", grpc = "{host}:8101" }
+# hosts = ["10.0.3.10"]
+
+# =============================================================================
+# VPN NETWORK ORCHESTRATION (optional — safe to leave empty)
+# =============================================================================
+
+[network]
+# Fallback port when a service has no entry in [network.service_ports].
+default_service_port = 8000
+
+# {service = port} defaults for VPN-deployed services, e.g.:
+# [network.service_ports]
+# atlas = 8100
+
+# Known topology for network discovery, e.g.:
+# [network.discovery]
+# backends = [{ ip = "10.0.1.10", service = "atlas", port = 8000 }]
+# engines = []
+# runners = []
+
+# =============================================================================
+# PRODUCTION SHIP STACK (optional — safe to leave empty)
+# =============================================================================
+
+[ship]
+# Default project set for generated production compose stacks.
+production_projects = []
+
+# {project = [port strings]} published in the generated compose file, e.g.:
+# [ship.production_ports]
+# atlas = ["3001"]
+
+# {project = port} upstream ports for the generated nginx site config, e.g.:
+# [ship.nginx_ports]
+# atlas = 3001
+
+# =============================================================================
+# DEPLOYMENT CREDENTIAL LOOKUP (optional — safe to leave empty)
+# =============================================================================
+# {entity = ENV_VAR_SUFFIX} for entity-scoped platform credentials, e.g.:
+# [credentials.entity_suffixes]
+# myorg = "MYORG"

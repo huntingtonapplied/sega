@@ -1,0 +1,5 @@
+Contact: mailto:team@huntingtonapplied.com
+Expires: 2027-10-12T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://segaapp.com/.well-known/security.txt
+Policy: https://huntingtonapplied.com/terms

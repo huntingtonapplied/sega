@@ -1,0 +1,102 @@
+{{- if .Values.database.enabled }}
+{{- $name := include "fleet-project.name" . -}}
+{{- $ns := include "fleet-project.namespace" . -}}
+{{- $dbName := include "fleet-project.dbHost" . -}}
+{{- $db := default $name .Values.database.name -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $dbName }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" . | nindent 4 }}
+    app: {{ $dbName }}
+spec:
+  serviceName: {{ $dbName }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $dbName }}
+  template:
+    metadata:
+      labels:
+        {{- include "fleet-project.labels" . | nindent 8 }}
+        app: {{ $dbName }}
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # args (NOT command): keep the image's docker-entrypoint.sh, which runs
+          # initdb + drops from root to the postgres user, then forwards these.
+          # `command:` here bypasses the entrypoint -> "root execution not permitted".
+          args:
+            - postgres
+            - -c
+            - shared_preload_libraries={{ .Values.database.sharedPreloadLibraries }}
+            # Default 100 is exhausted by api gunicorn pools + scaled worker pools
+            # under a burst ("too many clients", hit live 2026-08-01) — right-size up.
+            - -c
+            - max_connections={{ .Values.database.maxConnections | default 200 }}
+            - -p
+            - {{ .Values.database.port | quote }}
+          ports:
+            - name: postgres
+              containerPort: {{ .Values.database.port }}
+          env:
+            - name: POSTGRES_DB
+              value: {{ $db | quote }}
+            - name: POSTGRES_USER
+              value: {{ $db | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet-project.secretName" . }}
+                  key: redis_password  # reuse the project secret; replace with a dedicated db_password key if split
+            - name: PGPORT
+              value: {{ .Values.database.port | quote }}
+          resources:
+            {{- toYaml .Values.database.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            {{- if .Values.database.initdbConfigMap }}
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+            {{- end }}
+      {{- if .Values.database.initdbConfigMap }}
+      volumes:
+        - name: initdb
+          configMap:
+            name: {{ .Values.database.initdbConfigMap }}
+      {{- end }}
+  {{- if .Values.database.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.database.persistence.storageClass }}
+        storageClassName: {{ .Values.database.persistence.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.database.persistence.size }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $dbName }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" . | nindent 4 }}
+    app: {{ $dbName }}
+spec:
+  selector:
+    app: {{ $dbName }}
+  ports:
+    - name: postgres
+      port: {{ .Values.database.port }}
+      targetPort: {{ .Values.database.port }}
+{{- end }}

@@ -1,0 +1,27 @@
+build:
+  docker:
+    context: .
+    dockerfile: Dockerfile
+    registry: ecr
+  strategy: containerized
+deployment:
+  targets:
+    production:
+      approval_required: true
+      auto_deploy: false
+      cluster: production-cluster
+      region: us-east-1
+      strategy: canary
+      type: aws-ecs
+    staging:
+      auto_deploy: true
+      cluster: staging-cluster
+      region: us-east-1
+      strategy: rolling
+      type: aws-ecs
+project:
+  domain: example
+  name: unknown
+  team: unknown
+  type: infrastructure_orchestrator
+version: '2.1'

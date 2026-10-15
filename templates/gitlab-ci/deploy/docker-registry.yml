@@ -1,0 +1,278 @@
+# GitLab CI/CD Pipeline Template for Docker Registry Deployment
+# ================================================================
+# File: templates/gitlab-ci/docker-registry-deployment.yml
+# Purpose: Modern Docker-based deployment via GitLab Container Registry
+# Compatible with: All projects using SEGA orchestration
+# Author: SEGA Development Team
+# Last Updated: 2025-08-16
+
+variables:
+  # Docker configuration
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  
+  # Registry configuration
+  REGISTRY_IMAGE: $CI_REGISTRY_IMAGE/$PROJECT_NAME
+  
+  # Build configuration
+  DOCKERFILE_PATH: "./Dockerfile"
+  DOCKER_BUILD_CONTEXT: "."
+  
+  # Deployment configuration
+  DEPLOY_ENVIRONMENT: "staging"
+  HEALTH_CHECK_TIMEOUT: "60"
+
+# Build stage configuration
+stages:
+  - validate
+  - build
+  - package
+  - deploy
+  - verify
+
+# Base Docker image with SEGA support
+image: docker:24.0.7
+
+services:
+  - docker:24.0.7-dind
+
+before_script:
+  # Install SEGA CLI for deployment orchestration
+  - apk add --no-cache curl bash python3 py3-pip
+  - curl -sSL https://install.fleet-dev.example.com/fleet_install | bash
+  - export PATH="$PATH:/opt/sega/bin"
+  
+  # Login to GitLab Container Registry
+  - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+
+# Stage 1: Validate project and dependencies
+validate:
+  stage: validate
+  script:
+    - echo " Validating project configuration..."
+    - sega detect --project-path .
+    - sega test --type unit --skip-integration
+    - echo " Project validation complete"
+  rules:
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_MERGE_REQUEST_IID
+
+# Stage 2: Build Docker image
+build:
+  stage: build
+  script:
+    - echo "️ Building Docker image for $PROJECT_NAME..."
+    
+    # Generate build metadata
+    - export BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+    - export GIT_COMMIT=${CI_COMMIT_SHA:0:8}
+    
+    # Build with multiple tags
+    - docker build 
+        --build-arg BUILD_DATE="$BUILD_DATE"
+        --build-arg GIT_COMMIT="$GIT_COMMIT"
+        --build-arg VERSION="$CI_COMMIT_TAG"
+        --tag $REGISTRY_IMAGE:$CI_COMMIT_SHA
+        --tag $REGISTRY_IMAGE:latest
+        --file $DOCKERFILE_PATH
+        $DOCKER_BUILD_CONTEXT
+    
+    # Test image can start
+    - docker run --rm --detach --name test_container $REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - sleep 10
+    - docker logs test_container
+    - docker stop test_container || true
+    
+    - echo " Docker image built successfully"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# Stage 3: Push to registry with version tags
+package:
+  stage: package
+  script:
+    - echo " Pushing images to GitLab Container Registry..."
+    
+    # Push commit-specific tag
+    - docker push $REGISTRY_IMAGE:$CI_COMMIT_SHA
+    
+    # Push version tag if this is a tagged release
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        docker tag $REGISTRY_IMAGE:$CI_COMMIT_SHA $REGISTRY_IMAGE:$CI_COMMIT_TAG
+        docker push $REGISTRY_IMAGE:$CI_COMMIT_TAG
+        echo " Version $CI_COMMIT_TAG published"
+      fi
+    
+    # Push latest tag for main branch
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
+        docker push $REGISTRY_IMAGE:latest
+        echo " Latest tag updated"
+      fi
+    
+    # Generate deployment manifest
+    - |
+      cat > deployment-manifest.json << EOF
+      {
+        "project": "$PROJECT_NAME",
+        "image": "$REGISTRY_IMAGE:$CI_COMMIT_SHA",
+        "version": "${CI_COMMIT_TAG:-$CI_COMMIT_SHA}",
+        "build_date": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+        "git_commit": "$CI_COMMIT_SHA",
+        "registry": "$CI_REGISTRY",
+        "environment": "$DEPLOY_ENVIRONMENT"
+      }
+      EOF
+    
+    - echo " Images packaged and manifest generated"
+  artifacts:
+    reports:
+      deployment-manifest.json
+    paths:
+      - deployment-manifest.json
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# Stage 4: Deploy to staging environment
+deploy_staging:
+  stage: deploy
+  environment:
+    name: staging
+    url: https://$PROJECT_NAME-staging.example.com
+  script:
+    - echo " Deploying $PROJECT_NAME to staging environment..."
+    
+    # Deploy using SEGA with Docker registry
+    - sega deploy 
+        --project $PROJECT_NAME
+        --environment staging 
+        --image $REGISTRY_IMAGE:$CI_COMMIT_SHA
+        --registry $CI_REGISTRY
+        --wait-for-health
+    
+    # Verify deployment
+    - sega status --project $PROJECT_NAME --environment staging
+    
+    - echo " Staging deployment complete"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - when: manual
+      if: $CI_MERGE_REQUEST_IID
+
+# Stage 5: Deploy to production (manual)
+deploy_production:
+  stage: deploy
+  environment:
+    name: production
+    url: https://$PROJECT_NAME.fleet-dev.example.com
+  script:
+    - echo " Deploying $PROJECT_NAME to production environment..."
+    
+    # Production deployment with additional safety checks
+    - sega deploy 
+        --project $PROJECT_NAME
+        --environment production
+        --image $REGISTRY_IMAGE:${CI_COMMIT_TAG:-$CI_COMMIT_SHA}
+        --registry $CI_REGISTRY
+        --backup-previous
+        --health-check-timeout $HEALTH_CHECK_TIMEOUT
+        --wait-for-health
+    
+    # Post-deployment verification
+    - sega test --project $PROJECT_NAME --type smoke --environment production
+    - sega status --project $PROJECT_NAME --environment production
+    
+    - echo " Production deployment complete"
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: manual
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: false
+
+# Stage 6: Verify deployment health
+verify_deployment:
+  stage: verify
+  script:
+    - echo " Verifying deployment health..."
+    
+    # Comprehensive health check
+    - sega test --project $PROJECT_NAME --type health --environment $DEPLOY_ENVIRONMENT
+    
+    # Performance baseline check
+    - sega monitor --project $PROJECT_NAME --check-performance --duration 60
+    
+    # Integration test with other services
+    - sega test --project $PROJECT_NAME --type integration --environment $DEPLOY_ENVIRONMENT
+    
+    - echo " Deployment verification complete"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+  allow_failure: true
+
+# Rollback job (manual trigger)
+rollback:
+  stage: deploy
+  script:
+    - echo " Rolling back $PROJECT_NAME deployment..."
+    
+    # Get previous version
+    - PREVIOUS_VERSION=$(sega history --project $PROJECT_NAME --environment $DEPLOY_ENVIRONMENT --format json | jq -r '.[1].version')
+    
+    # Rollback to previous version
+    - sega rollback 
+        --project $PROJECT_NAME
+        --environment $DEPLOY_ENVIRONMENT
+        --to-version $PREVIOUS_VERSION
+        --wait-for-health
+    
+    - echo " Rollback complete to version $PREVIOUS_VERSION"
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# Cleanup old images (scheduled)
+cleanup:
+  stage: verify
+  script:
+    - echo " Cleaning up old container images..."
+    
+    # Keep last 10 images per project
+    - |
+      IMAGES_TO_DELETE=$(sega registry list --project $PROJECT_NAME --older-than 30d --keep 10)
+      if [ -n "$IMAGES_TO_DELETE" ]; then
+        echo "Deleting old images: $IMAGES_TO_DELETE"
+        sega registry clean --project $PROJECT_NAME --older-than 30d --keep 10 --confirm
+      else
+        echo "No old images to clean up"
+      fi
+    
+    - echo " Cleanup complete"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# Cache configuration for faster builds
+cache:
+  key: "$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
+  paths:
+    - .docker_cache/
+    - node_modules/
+    - .venv/
+    - vendor/
+
+# Artifacts configuration
+artifacts:
+  reports:
+    junit: test-results.xml
+    coverage: coverage.xml
+  paths:
+    - logs/
+    - test-results/
+  when: always
+  expire_in: 1 week

@@ -1,0 +1,151 @@
+# FLEET Hardware Build Configurations
+# These configs replace infrastructure/orchestration/ build scripts
+# Usage: sega build <component> or manual cmake with these flags
+
+components:
+  engine:
+    repo: git@gitlab.com:FLEET-ai/engine.git
+    build_type: python
+    apt_deps:
+      - curl
+      - unzip
+      - python3
+      - python3-pip
+      - protobuf-compiler
+      - python3-protobuf
+      - python3-numpy
+      - python3-scipy
+
+  gnuradio:
+    repo: https://github.com/gnuradio/gnuradio.git
+    branch: v3.10.5.0
+    build_type: cmake
+    cmake_flags:
+      - -DENABLE_POSTINSTALL=OFF
+      - -DENABLE_DOXYGEN=OFF
+      - -DENABLE_MANPAGES=OFF
+      - -DENABLE_GR_FEC=OFF
+      - -DENABLE_GR_DIGITAL=OFF
+      - -DENABLE_GR_AUDIO=OFF
+      - -DENABLE_GR_IIO=OFF
+      - -DENABLE_GR_VOCODER=OFF
+      - -DENABLE_GR_TRELLIS=OFF
+      - -DENABLE_GR_DTV=OFF
+      - -DENABLE_GR_WAVELET=OFF
+      - -DENABLE_GR_VIDEO_SDL=OFF
+      - -DENABLE_GR_SOAPY=OFF
+    apt_deps:
+      - python3-pygccxml
+      - python3-packaging
+      - libgmp-dev
+      - libspdlog-dev
+      - libfftw3-dev
+      - libzmq3-dev
+      - libiio-dev
+      - libqwt-qt5-dev
+      - libqt5opengl5-dev
+      - libunwind-dev
+      - python3-pyqt5
+      - python3-scipy
+      - python3-pyqtgraph
+      - python3-click-plugins
+      - python3-zmq
+      - pybind11-dev
+      - libsdl1.2-dev
+      - libsoapysdr-dev
+      - libgsl-dev
+      - libsndfile1-dev
+      - libad9361-dev
+      - python3-jsonschema
+
+  gr-fleet:
+    repo: git@gitlab.com:FLEET-ai/gr-FLEET.git
+    build_type: cmake
+    apt_deps:
+      - protobuf-compiler
+
+  uhd:
+    repo: git@gitlab.com:FLEET-ai/uhd.git
+    branch: UHD-4.3-FLEET
+    upstream: https://github.com/EttusResearch/uhd.git
+    build_type: cmake
+    cmake_subdir: host
+    cmake_flags:
+      - -DENABLE_MANUAL=OFF
+      - -DENABLE_DOXYGEN=OFF
+      - -DENABLE_B100=OFF
+      - -DENABLE_B200=OFF
+      - -DENABLE_E300=OFF
+      - -DENABLE_E320=OFF
+      - -DENABLE_MPMD=OFF
+      - -DENABLE_N300=OFF
+      - -DENABLE_N320=OFF
+      - -DENABLE_OCTOCLOCK=OFF
+      - -DENABLE_USRP1=OFF
+      - -DENABLE_USB=OFF
+      - -DENABLE_USRP2=OFF
+      - -DENABLE_X400=OFF
+    apt_deps:
+      - git
+      - cmake
+      - build-essential
+      - libboost-all-dev
+      - libusb-1.0-0-dev
+      - python3-numpy
+      - python3-setuptools
+      - python3-mako
+
+  volk:
+    repo: https://github.com/gnuradio/volk.git
+    branch: v3.1.1
+    build_type: cmake
+    apt_deps:
+      - liborc-0.4-dev
+
+  openFPGAloader:
+    repo: https://github.com/trabucayre/openFPGALoader.git
+    build_type: cmake
+    apt_deps:
+      - libudev-dev
+      - libftdi1-dev
+      - libhidapi-dev
+      - pkg-config
+
+  rfnoc-fleet:
+    repo: git@gitlab.com:FLEET-ai/rfnoc-FLEET.git
+    build_type: cmake
+    notes: requires UHD FPGA sources at ../uhd/repo/fpga
+
+  pilot:
+    repo: git@gitlab.com:FLEET-ai/pilot.git
+    build_type: python
+    apt_deps:
+      - curl
+      - unzip
+      - python3
+      - python3-pip
+      - protobuf-compiler
+      - python3-protobuf
+
+  spectool:
+    repo: git@gitlab.com:FLEET-ai/spectool.git
+    build_type: python
+    apt_deps:
+      - python3
+      - python3-pip
+      - protobuf-compiler
+      - python3-protobuf
+
+# Environment setup for built components
+environment:
+  install_prefix: /opt/FLEET/sensor-net-${VERSION:-dev}
+  paths:
+    - ${INSTALL_PREFIX}/bin
+    - ${INSTALL_PREFIX}/local/bin
+  ld_library_path: ${INSTALL_PREFIX}/lib
+  pythonpath:
+    - ${INSTALL_PREFIX}/lib/python3.10/site-packages
+    - ${INSTALL_PREFIX}/local/lib/python3.10/dist-packages
+  uhd_dir: ${INSTALL_PREFIX}
+  uhd_module_path: ${INSTALL_PREFIX}/lib/uhd/modules
+  grc_blocks_path: ${INSTALL_PREFIX}/share/gnuradio/grc/blocks

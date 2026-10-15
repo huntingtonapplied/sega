@@ -1,0 +1,134 @@
+# Basic Hello World Example - SEGA Demo
+# The simplest possible SEGA configuration.
+
+version: "1.0"
+
+# Project Information
+project:
+  name: "sega-hello-world"
+  type: "web_app"
+  domain: "examples"
+  team: "demo"
+  description: "Basic hello world web application demonstrating core SEGA features"
+
+  metadata:
+    owner: "demo@example.com"
+    created_date: "2026-01-01"
+    criticality: "low"
+    classification: "public"
+
+# Build Configuration
+build:
+  strategy: "containerized"
+
+  commands:
+    development: "npm run dev"
+    staging: "npm run build"
+    production: "npm run build"
+
+  docker:
+    dockerfile: "Dockerfile"
+    context: "."
+    target: "production"
+
+  environment:
+    - name: "NODE_ENV"
+      value: "${DEPLOYMENT_ENV}"
+    - name: "PORT"
+      value: "3000"
+
+# Deployment Configuration
+deployment:
+  targets:
+    development:
+      type: "local"
+      auto_deploy: true
+
+    staging:
+      type: "aws-ecs"
+      region: "us-east-1"
+      cluster: "demo-staging"
+      strategy: "rolling"
+
+    production:
+      type: "aws-ecs"
+      region: "us-east-1"
+      cluster: "demo-production"
+      strategy: "blue-green"
+
+  infrastructure:
+    compute:
+      cpu: 512
+      memory: 512
+
+    networking:
+      port: 3000
+      health_check_path: "/health"
+      load_balancer: true
+
+    scaling:
+      min_instances: 1
+      max_instances: 3
+      cpu_threshold: 70
+
+# Testing Configuration
+testing:
+  types:
+    - "unit"
+    - "integration"
+    - "security"
+
+  commands:
+    unit: "npm test"
+    integration: "npm run test:integration"
+    security: "npm run test:security"
+
+  requirements:
+    coverage_threshold: 80
+    security_threshold: "medium"
+
+# Security Configuration
+security:
+  vulnerability_scanning:
+    enabled: true
+    fail_on: "high"
+    scanners:
+      - "dependency"
+      - "static"
+      - "container"
+
+  policies:
+    require_signed_commits: false
+    require_code_review: false
+    max_secret_exposure: 0
+
+# Monitoring Configuration
+monitoring:
+  metrics:
+    enabled: true
+    collector: "prometheus"
+
+  alerts:
+    - name: "high_cpu"
+      condition: "cpu > 80%"
+      notification: "console"
+
+  logging:
+    level: "info"
+    format: "json"
+
+# Dependencies
+dependencies:
+  system:
+    - "docker"
+    - "node"
+
+  runtime:
+    - "node:20"
+
+# Web-specific configuration
+web:
+  framework: "express"
+  performance:
+    target_response_time: "200ms"
+    target_throughput: "100 rps"

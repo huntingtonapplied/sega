@@ -1,0 +1,101 @@
+{
+  "services": {
+    "start": "${START_COMMAND:-make dev-shared}",
+    "healthCheck": "${HEALTH_CHECK_URL:-http://localhost:${FRONTEND_PORT:-3001}/health}",
+    "stop": "${STOP_COMMAND:-make down}",
+    "waitForReady": {
+      "timeout": "${STARTUP_TIMEOUT:-120000}",
+      "checkInterval": "${CHECK_INTERVAL:-2000}"
+    }
+  },
+  "testData": {
+    "strategy": "${TEST_STRATEGY:-api_creation_ui_validation}",
+    "resetCommand": "${RESET_COMMAND:-curl -X DELETE ${API_BASE_URL:-http://localhost:3001}/api/test-data}",
+    "seedCommand": "${SEED_COMMAND:-curl -X POST ${API_BASE_URL:-http://localhost:3001}/api/test-data/seed}",
+    "apiBaseUrl": "${API_BASE_URL:-http://localhost:${BACKEND_PORT:-3001}/api}",
+    "testEntities": {
+      "endpoint": "${ENTITIES_ENDPOINT:-/entities}",
+      "fields": {
+        "name": "name",
+        "description": "description",
+        "id": "id"
+      }
+    }
+  },
+  "validation": {
+    "tiers": ["static", "dynamic", "integration"],
+    "successCriteria": "${SUCCESS_CRITERIA:-database_write_then_ui_read}",
+    "routes": {
+      "core": "${CORE_ROUTES:-[\"/\", \"/dashboard\"]}",
+      "api": "${API_ROUTES:-[\"/api/health\"]}"
+    },
+    "skipTiers": "${SKIP_TIERS:-[]}",
+    "continueOnFailure": "${CONTINUE_ON_FAILURE:-false}"
+  },
+  "selectors": {
+    "usernameField": "${USERNAME_SELECTOR:-input[type=\"email\"], input[name=\"username\"]}",
+    "passwordField": "${PASSWORD_SELECTOR:-input[type=\"password\"]}",
+    "loginButton": "${LOGIN_BUTTON_SELECTOR:-button[type=\"submit\"], input[type=\"submit\"]}",
+    "dashboardLink": "${DASHBOARD_SELECTOR:-a[href*=\"dashboard\"], nav a:contains(\"Dashboard\")}",
+    "dataTable": "${DATA_TABLE_SELECTOR:-table, [role=\"table\"], .data-table}",
+    "errorMessage": "${ERROR_SELECTOR:-.error, .alert-danger, [role=\"alert\"]}",
+    "loadingIndicator": "${LOADING_SELECTOR:-.loading, .spinner, [aria-busy=\"true\"]}"
+  },
+  "authentication": {
+    "enabled": "${AUTH_ENABLED:-false}",
+    "provider": "${AUTH_PROVIDER:-local}",
+    "testUser": {
+      "email": "${TEST_USER_EMAIL:-test@example.com}",
+      "password": "${TEST_USER_PASSWORD:-testpassword123}",
+      "name": "${TEST_USER_NAME:-Test User}"
+    },
+    "loginUrl": "${LOGIN_URL:-/login}",
+    "logoutUrl": "${LOGOUT_URL:-/logout}",
+    "dashboardUrl": "${DASHBOARD_URL:-/dashboard}"
+  },
+  "browser": {
+    "headless": "${HEADLESS:-true}",
+    "slowMo": "${SLOW_MO:-0}",
+    "viewport": {
+      "width": "${VIEWPORT_WIDTH:-1280}",
+      "height": "${VIEWPORT_HEIGHT:-720}"
+    },
+    "timeout": "${DEFAULT_TIMEOUT:-30000}",
+    "navigationTimeout": "${NAVIGATION_TIMEOUT:-30000}",
+    "actionTimeout": "${ACTION_TIMEOUT:-10000}",
+    "screenshot": {
+      "enabled": "${SCREENSHOT_ENABLED:-true}",
+      "onFailure": "${SCREENSHOT_ON_FAILURE:-true}",
+      "fullPage": "${SCREENSHOT_FULL_PAGE:-false}"
+    },
+    "video": {
+      "enabled": "${VIDEO_ENABLED:-false}",
+      "onFailure": "${VIDEO_ON_FAILURE:-true}"
+    },
+    "trace": {
+      "enabled": "${TRACE_ENABLED:-false}",
+      "onFailure": "${TRACE_ON_FAILURE:-true}"
+    }
+  },
+  "reporting": {
+    "format": "${REPORT_FORMAT:-yaml}",
+    "outputDir": "${REPORT_DIR:-./test-results}",
+    "includeScreenshots": "${INCLUDE_SCREENSHOTS:-true}",
+    "includeConsoleLogs": "${INCLUDE_CONSOLE_LOGS:-true}",
+    "includeNetworkLogs": "${INCLUDE_NETWORK_LOGS:-true}",
+    "verbosity": "${REPORT_VERBOSITY:-normal}"
+  },
+  "projectSpecific": {
+    "projectName": "${PROJECT_NAME}",
+    "projectType": "${PROJECT_TYPE}",
+    "features": "${PROJECT_FEATURES:-[]}",
+    "customPorts": {
+      "frontend": "${FRONTEND_PORT}",
+      "backend": "${BACKEND_PORT}",
+      "additional": "${ADDITIONAL_PORTS:-{}}"
+    },
+    "customEndpoints": "${CUSTOM_ENDPOINTS:-{}}",
+    "customSelectors": "${CUSTOM_SELECTORS:-{}}",
+    "customValidation": "${CUSTOM_VALIDATION:-{}}"
+  }
+}

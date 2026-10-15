@@ -1,0 +1,282 @@
+# Express REST API Example - Advanced Web Application Demo
+# Demonstrates advanced SEGA features for production web applications
+
+version: "1.0"
+
+# Project Information
+project:
+  name: "sega-express-api"
+  type: "web_app"
+  domain: "examples"
+  team: "demo"
+  description: "Production-ready Express.js REST API with database, caching, and monitoring"
+
+  metadata:
+    owner: "demo@example.com"
+    created_date: "2026-01-01"
+    criticality: "medium"
+    classification: "internal"
+
+# Build Configuration
+build:
+  strategy: "containerized"
+
+  commands:
+    development: "npm run dev"
+    staging: "npm run build && npm run migrate"
+    production: "npm run build && npm run migrate && npm run seed:prod"
+
+  docker:
+    dockerfile: "Dockerfile"
+    context: "."
+    target: "production"
+    registry: "demo-registry"
+
+  environment:
+    - name: "NODE_ENV"
+      value: "${DEPLOYMENT_ENV}"
+    - name: "PORT"
+      value: "8000"
+    - name: "DATABASE_URL"
+      value: "${DATABASE_URL}"
+    - name: "REDIS_URL"
+      value: "${REDIS_URL}"
+    - name: "JWT_SECRET"
+      value: "${JWT_SECRET}"
+    - name: "API_VERSION"
+      value: "v1"
+
+# Deployment Configuration
+deployment:
+  targets:
+    development:
+      type: "local"
+      auto_deploy: true
+
+    staging:
+      type: "aws-ecs"
+      region: "us-east-1"
+      cluster: "demo-staging"
+      strategy: "rolling"
+      auto_deploy: true
+
+    production:
+      type: "aws-ecs"
+      region: "us-east-1"
+      cluster: "demo-production"
+      strategy: "blue-green"
+      auto_deploy: false
+      approval_required: true
+
+  infrastructure:
+    compute:
+      cpu: 512
+      memory: 512
+      storage: "10GB"
+
+    networking:
+      port: 8000
+      health_check_path: "/api/v1/health"
+      load_balancer: true
+      ssl_certificate: true
+
+    scaling:
+      min_instances: 1
+      max_instances: 3
+      cpu_threshold: 70
+      memory_threshold: 80
+
+# Testing Configuration
+testing:
+  types:
+    - "unit"
+    - "integration"
+    - "security"
+    - "e2e"
+    - "load"
+
+  commands:
+    unit: "npm run test:unit"
+    integration: "npm run test:integration"
+    security: "npm run test:security"
+    e2e: "npm run test:e2e"
+    load: "npm run test:load"
+
+  requirements:
+    coverage_threshold: 80
+    security_threshold: "high"
+    performance_threshold: "p95 < 200ms"
+
+# Security Configuration
+security:
+  vulnerability_scanning:
+    enabled: true
+    fail_on: "high"
+    scanners:
+      - "dependency"
+      - "static"
+      - "container"
+      - "dast"
+
+  compliance:
+    frameworks: ["OWASP", "SOC2"]
+    data_classification: "internal"
+
+  policies:
+    require_signed_commits: true
+    require_code_review: true
+    max_secret_exposure: 0
+    rate_limiting: true
+    input_validation: true
+
+  auth:
+    method: "jwt"
+    session_timeout: "1h"
+    password_policy: "strong"
+
+# Monitoring Configuration
+monitoring:
+  metrics:
+    enabled: true
+    collector: "prometheus"
+    retention: "30d"
+    custom_metrics:
+      - "api_requests_total"
+      - "api_response_time"
+      - "database_connections"
+      - "cache_hit_rate"
+
+  alerts:
+    - name: "high_error_rate"
+      condition: "error_rate > 5%"
+      notification: "slack://demo-alerts"
+
+    - name: "high_response_time"
+      condition: "response_time_p95 > 500ms"
+      notification: "email://demo@example.com"
+
+    - name: "database_connection_pool"
+      condition: "db_connections > 80%"
+      notification: "slack://demo-alerts"
+
+    - name: "memory_usage"
+      condition: "memory > 85%"
+      notification: "email://demo@example.com"
+
+  logging:
+    level: "info"
+    format: "json"
+    retention: "30d"
+    structured: true
+
+# Dependencies
+dependencies:
+  system:
+    - "docker"
+    - "node"
+    - "redis"
+
+  runtime:
+    - "node:20"
+    - "redis:7"
+    - "postgres:15"
+
+  build:
+    - "npm"
+
+# Database Configuration
+database:
+  type: "postgresql"
+  version: "15"
+
+  development:
+    host: "localhost"
+    port: 5432
+    name: "sega_express_dev"
+
+  staging:
+    host: "${DB_HOST}"
+    port: 5432
+    name: "sega_express_staging"
+    ssl: true
+
+  production:
+    host: "${DB_HOST}"
+    port: 5432
+    name: "sega_express_prod"
+    ssl: true
+    backup: true
+
+  migrations:
+    enabled: true
+    auto_run: true
+
+  pooling:
+    min: 5
+    max: 20
+    idle_timeout: "30s"
+
+# Cache Configuration
+cache:
+  type: "redis"
+  version: "7"
+
+  development:
+    host: "localhost"
+    port: 6379
+
+  staging:
+    host: "${REDIS_HOST}"
+    port: 6379
+    ssl: true
+
+  production:
+    host: "${REDIS_HOST}"
+    port: 6379
+    ssl: true
+    cluster: true
+
+  settings:
+    ttl: "1h"
+    max_memory: "256mb"
+    eviction_policy: "allkeys-lru"
+
+# Web-specific Configuration
+web:
+  framework: "express"
+  api_framework: "express"
+  database: "postgresql"
+  cache: "redis"
+
+  performance:
+    target_response_time: "200ms"
+    target_throughput: "100 rps"
+    compression: true
+    static_assets: true
+
+  api:
+    version: "v1"
+    rate_limiting:
+      requests_per_minute: 60
+      burst: 100
+    pagination:
+      default_limit: 20
+      max_limit: 100
+
+  cors:
+    enabled: true
+    origins: ["https://demo.example.com"]
+    credentials: true
+
+  swagger:
+    enabled: true
+    path: "/api/docs"
+
+  middleware:
+    - "helmet"
+    - "compression"
+    - "rate-limit"
+    - "cors"
+    - "auth"
+    - "validation"
+    - "logging"

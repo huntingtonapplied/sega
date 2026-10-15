@@ -1,0 +1,28 @@
+---
+# HL Rust ngine Installation Role
+# Specialized for lacklab and other Rust-based engines
+
+- name: Include base engine installation
+  include_role:
+    name: install_fleet_engine
+  vars:
+    engine_type: "rust"
+    engine_image: "{{ rust_engine_image | default(docker_registry + '/example/atlas-engine:latest') }}"
+    engine_command: "{{ rust_engine_command | default([]) }}"
+    engine_environment: "{{ rust_engine_environment | default({}) }}"
+
+- name: Install Rust engine-specific configuration
+  template:
+    dest: "{{ ansible_env.HOM }}/fleet_engine/config/rust_engine.toml"
+    src: "rust_engine.toml.j"
+    mode: ''
+  when: rust_engine_config is defined
+
+- name: Configure Rust engine resources
+  shell: |
+    docker compose -f {{ ansible_env.HOM }}/fleet_engine/docker-compose.yml exec -T engine sh -c "
+    echo 'Rust engine specific setup completed'
+    "
+  args:
+    chdir: "{{ ansible_env.HOM }}/fleet_engine"
+  ignore_errors: yes

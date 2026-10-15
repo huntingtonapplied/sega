@@ -1,0 +1,32 @@
+# SEGA System Monitors (EXAMPLE TEMPLATE)
+# Hosts the Live Status "Systems" strip watches.
+# Consumed by sega.probe.system_status.SystemStatusCollector (SSH, one
+# round-trip per host). Mounted into the sega-dashboard container next to
+# domain_registry.yaml.
+#
+# Copy this file to `system_monitors.yaml` and fill in your own hosts.
+#
+# ssh_key: inside the container this is overridden by SEGA_SYSMON_SSH_KEY
+# (compose mounts the dedicated monitoring key at /app/secrets/sysmon_ssh_key).
+# The key must be authorized on every host below:
+#   ssh-copy-id -i ~/.ssh/your-sysmon-key.pub <user>@<address>
+
+version: "1.0"
+
+defaults:
+  user: <your-username>
+  ssh_key: ~/.ssh/your-sysmon-key
+
+systems:
+  - name: host-01
+    address: 192.0.2.10
+    label: "Example host · landing pages + tunnel"
+
+  - name: host-02
+    address: 192.0.2.11
+    label: "Example host · agents"
+
+  - name: host-03
+    address: 192.0.2.12
+    user: <another-username>
+    label: "Example workstation"

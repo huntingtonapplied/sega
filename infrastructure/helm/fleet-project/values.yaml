@@ -1,0 +1,201 @@
+# fleet-project — default values (schema + safe fleet defaults).
+#
+# Everything here is overridable per project via values-<proj>.yaml. Defaults are
+# deliberately CONSERVATIVE: components default to enabled:false so a new project
+# opts INTO exactly the services it runs. A reference values file
+# (values-<proj>.yaml) shows a fully-populated project.
+#
+# Render:   helm template <proj> . -f values-<proj>.yaml
+# Lint:     helm lint . -f values-<proj>.yaml
+# See README.md for the L0 static guards this chart is designed to satisfy.
+
+# --- project identity --------------------------------------------------------
+project:
+  # Short name — drives resource names, labels, and (by default) the namespace.
+  name: fleet-project
+  # Namespace the project deploys into. Blank => use .project.name.
+  namespace: ""
+  # Let the chart create the Namespace. Production leaves this false — sega
+  # creates the namespace out-of-band (T4). Set true for standalone local apply.
+  createNamespace: false
+
+# --- images ------------------------------------------------------------------
+# Per-environment image variants (T6) are a values swap: point registry/tag at
+# the staging or production ECR path. Individual components may override image.*.
+image:
+  registry: ""          # e.g. <acct>.dkr.ecr.us-east-2.amazonaws.com  (blank = local)
+  pullPolicy: IfNotPresent
+  tag: latest
+  pullSecrets: []       # [{name: ecr-creds}]
+
+# --- secrets -----------------------------------------------------------------
+# Production path: sega secrets push creates the k8s Secret out-of-band (T4), so
+# the chart only REFERENCES it (create:false). For standalone local testing set
+# create:true and supply values (never commit real creds).
+secret:
+  create: false
+  name: ""              # blank => "<project>-secrets"
+  # Only used when create:true. postgresqlUrl MUST NOT be left CHANGE_ME.
+  data:
+    postgresqlUrl: ""
+    redisPassword: ""
+
+# --- config (non-secret) -----------------------------------------------------
+config:
+  # redisUrl is consumed as env REDIS_URL by the worker and others.
+  redisUrl: ""          # blank => redis://<project>-redis:<redis.port>/0
+  # Engine TOML mounted into workers at /app/<project>.toml (subPath).
+  engineToml: ""        # multi-line string; see your project's values-<proj>.yaml
+
+# --- in-cluster datastores ---------------------------------------------------
+redis:
+  enabled: false
+  image:
+    repository: redis
+    tag: "7-alpine"
+  port: 6379
+  requireAuth: true     # password read from the project Secret (redis_password)
+  appendonly: true
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""    # blank => cluster default (gp3 on EKS)
+  resources:
+    requests: {memory: "128Mi", cpu: "50m"}
+    limits: {memory: "512Mi", cpu: "500m"}
+
+database:
+  enabled: false
+  # TimescaleDB StatefulSet — RDS is ruled out for TimescaleDB projects (F4).
+  image:
+    repository: timescale/timescaledb
+    tag: "latest-pg15"
+  port: 5432
+  name: ""              # DB/user name; blank => .project.name
+  sharedPreloadLibraries: "timescaledb"
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+  resources:
+    requests: {memory: "512Mi", cpu: "250m"}
+    limits: {memory: "4Gi", cpu: "2000m"}
+  # initdb-only launch (launch-DB standard): no migrations at launch.
+  initdbConfigMap: ""   # optional: name of a ConfigMap with /docker-entrypoint-initdb.d scripts
+
+# --- web tier (Deployment + Service, optionally ALB-routed) ------------------
+# Map of name -> config. Each entry becomes a Deployment + ClusterIP Service.
+# Set `host` to attach an ALB ingress rule (see ingress.enabled).
+web: {}
+#  api:
+#    image: {repository: atlas/api}
+#    command: ["backend"]
+#    port: 8009
+#    replicas: 2
+#    host: api.atlas.example.com
+#    healthPath: /v1/health
+#    env: []
+#    resources: {}
+
+# --- orchestration worker + KEDA ---------------------------------------------
+# The proven, E.2-reconciled shape. The worker pod = worker process + engine
+# subprocess (D6). KEDA scales it 0..N on Redis queue depth.
+worker:
+  enabled: false
+  image:
+    repository: ""      # e.g. atlas/worker
+  # Command + args to launch the worker module.
+  command: []
+  args: []
+  replicas: 1
+  extraEnv: []          # FLEET_ORCHESTRATION_MODE etc. added automatically below
+  orchestrationMode: k8s_distributed
+  resources:
+    requests: {memory: "512Mi", cpu: "250m"}
+    limits: {memory: "2Gi", cpu: "1000m"}
+  # Engine config file mounted at /app/<project>.toml (uses .config.engineToml).
+  mountEngineConfig: true
+  # Spread workers across nodes.
+  antiAffinity: true
+  # --- engine report path (how the in-pod engine subprocess reports back) ------
+  # The engine PUSHes reports/proofs over ZMQ. On the minis it uses localhost +
+  # a port convention (engine --addr defaults to 127.0.0.1:5512), which only
+  # works because the forwarder shares the host. In k8s the pod-local subprocess
+  # would PUSH to its own pod, so pick ONE:
+  #
+  #   forwarder.mode: sidecar  -> run engine_report as a 2nd container in the
+  #     worker pod; localhost:5512 stays valid, NO engine/worker code change.
+  #     Simplest for Phase-1 testing. Cost: N forwarders (per-pod DB writers).
+  #   forwarder.mode: service  -> engine PUSHes to the shared forwarder ClusterIP
+  #     (daemons.forwarder). One writer, no field_data races (matches D6 diagram).
+  #     NO code change: the engine already reads BACKEND_FORWARDER_HOST
+  #     (engine_initialization.py:427); the worker inherits pod env into the
+  #     subprocess (worker.py:1030). The chart sets that env in service mode.
+  forwarder:
+    mode: sidecar             # sidecar | service
+    image: {repository: ""}   # sidecar only: the engine_report image (defaults to worker image)
+    command: ["python", "-m", "engine_report", "-v"]
+    reportPort: 5512
+    commandPort: 5513
+    # Extra env for the sidecar container (additive; [] => reference shape
+    # unchanged). Needed where the forwarder's env contract differs from the
+    # fixed POSTGRESQL_URL/TIMESCALEDB_URL block (e.g. hermes: ENGINE_HOST /
+    # ENGINE_REPORT_PORT / TSDB_*).
+    extraEnv: []
+  # For forwarder.mode=service: the host set as BACKEND_FORWARDER_HOST on the
+  # worker (inherited by the engine subprocess). Blank => the in-cluster
+  # forwarder Service <project>-forwarder.<namespace>.svc.cluster.local.
+  backendForwarderHost: ""
+  # --- writable engine log dir (F5) --------------------------------------------
+  # The engine subprocess defaults to a project log path baked into the image
+  # (e.g. /usr/src/logs) that is read-only at runtime → PermissionError silently
+  # disables engine logging in-pod. Point the project's <PROJECT>_LOG_DIR env at
+  # a writable emptyDir. envName is per-project (ATLAS_LOG_DIR, HERMES_LOG_DIR…).
+  logDir:
+    enabled: false
+    envName: ""         # e.g. ATLAS_LOG_DIR — REQUIRED when enabled
+    path: /tmp/logs
+  keda:
+    enabled: true
+    # L0 GUARD: listName must be a key the coordinator writes as a LIST (or a
+    # ZSET mirrored to a LIST). The reference project mirrors its ZSET into
+    # <project>:jobs:pending — see its values-<proj>.yaml.
+    listName: ""        # e.g. atlas:jobs:pending
+    listLength: "5"
+    databaseIndex: "0"
+    pollingInterval: 10
+    cooldownPeriod: 60
+    minReplicaCount: 1
+    maxReplicaCount: 20
+    # L0 GUARD: FQDN required — KEDA resolves this from the `keda` namespace;
+    # a short `redis:6379` fails DNS and the ScaledObject never goes Ready.
+    # Blank => redis.<namespace>.svc.cluster.local:<redis.port>
+    address: ""
+
+# --- background daemons (Deployment, optional Service) -----------------------
+# celery, celery-beat, forwarder, reporter, swarm-dispatch/ingest/replica,
+# aggregator — anything that is a long-running process, not web-routed.
+# Map of name -> config; set `service.ports` to expose a ClusterIP (e.g. ZMQ).
+daemons: {}
+#  forwarder:
+#    image: {repository: atlas/api}
+#    command: ["python", "-m", "engine_report", "-v"]
+#    service: {ports: [{name: report, port: 5512}]}
+
+# --- ingress (AWS Load Balancer Controller / ALB) ----------------------------
+ingress:
+  enabled: false
+  className: alb
+  # ALB annotations (internet-facing, ACM cert, health checks). Provided at
+  # infra time by sega infrastructure (T2); overridable per project.
+  annotations: {}
+  # Host rules are derived from web[*].host. tls uses ACM via annotations.
+
+# --- RBAC --------------------------------------------------------------------
+# Worker needs to list pods/configmaps (K8sAdapter.get_worker_status).
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+  name: ""              # blank => "<project>-worker"

@@ -1,0 +1,393 @@
+#!/bin/bash
+# ============================================================================
+# SYSMON - FLEET System Monitor
+# ============================================================================
+# Unified CLI tool for disk, CPU, Docker, and cleanup operations
+# across local and EC2 instances.
+#
+# Usage: sysmon <command> [options]
+# Run 'sysmon help' for available commands
+# ============================================================================
+
+set -euo pipefail
+
+# ============================================================================
+# SCRIPT DIRECTORY DETECTION
+# ============================================================================
+
+# Get the directory where sysmon is located
+SYSMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SYSMON_LIB_DIR="${SYSMON_DIR}/lib"
+SYSMON_COMMANDS_DIR="${SYSMON_DIR}/commands"
+
+# ============================================================================
+# SOURCE LIBRARIES
+# ============================================================================
+
+# Source common utilities (colors, logging, etc.)
+if [[ -f "${SYSMON_LIB_DIR}/common.sh" ]]; then
+    source "${SYSMON_LIB_DIR}/common.sh"
+else
+    echo "ERROR: Missing library: ${SYSMON_LIB_DIR}/common.sh" >&2
+    exit 1
+fi
+
+# Source configuration
+if [[ -f "${SYSMON_LIB_DIR}/config.sh" ]]; then
+    source "${SYSMON_LIB_DIR}/config.sh"
+else
+    log_error "Missing library: ${SYSMON_LIB_DIR}/config.sh"
+    exit 1
+fi
+
+# Source collectors
+if [[ -f "${SYSMON_LIB_DIR}/collectors.sh" ]]; then
+    source "${SYSMON_LIB_DIR}/collectors.sh"
+else
+    log_error "Missing library: ${SYSMON_LIB_DIR}/collectors.sh"
+    exit 1
+fi
+
+# Source display libraries (optional - only needed for animated mode)
+SYSMON_DISPLAY_DIR="${SYSMON_LIB_DIR}/display"
+source_display_libs() {
+    if [[ -d "${SYSMON_DISPLAY_DIR}" ]]; then
+        [[ -f "${SYSMON_DISPLAY_DIR}/render.sh" ]] && source "${SYSMON_DISPLAY_DIR}/render.sh"
+        [[ -f "${SYSMON_DISPLAY_DIR}/widgets.sh" ]] && source "${SYSMON_DISPLAY_DIR}/widgets.sh"
+        [[ -f "${SYSMON_DISPLAY_DIR}/input.sh" ]] && source "${SYSMON_DISPLAY_DIR}/input.sh"
+        [[ -f "${SYSMON_DISPLAY_DIR}/graphs.sh" ]] && source "${SYSMON_DISPLAY_DIR}/graphs.sh"
+        [[ -f "${SYSMON_DISPLAY_DIR}/history.sh" ]] && source "${SYSMON_DISPLAY_DIR}/history.sh"
+        [[ -f "${SYSMON_DISPLAY_DIR}/pages.sh" ]] && source "${SYSMON_DISPLAY_DIR}/pages.sh"
+        return 0
+    fi
+    return 1
+}
+
+# ============================================================================
+# GLOBAL FLAGS
+# ============================================================================
+
+SYSMON_COMMAND=""
+SYSMON_ARGS=()
+
+# ============================================================================
+# HELP TEXT
+# ============================================================================
+
+show_version() {
+    echo "sysmon version ${SYSMON_VERSION}"
+}
+
+show_help() {
+    cat << 'EOF'
+SYSMON - FLEET System Monitor
+
+Usage: sysmon <command> [options]
+
+Commands:
+  status        Quick status check (local or remote)
+  analyze       Deep disk and system analysis
+  dashboard     Multi-instance dashboard (4-table view)
+  projects      Project-based metrics dashboard
+  cleanup       Cleanup operations (docker, builds, caches, preserves, processes, memory)
+  nuke          Aggressive full cleanup (stops all, clears everything)
+  report        Generate markdown/JSON report
+  help          Show this help or command-specific help
+
+Global Options:
+  --help, -h       Show help
+  --version, -v    Show version
+  --dry-run        Show what would be done without executing
+  --verbose        Enable verbose output
+  --quiet, -q      Suppress non-essential output
+  --animate        Enable live animated dashboard mode (auto-refresh)
+  --interval N     Set refresh interval in seconds (default: 3, with --animate)
+
+Examples:
+  sysmon status                    # Local quick status
+  sysmon status --instance 1       # Instance 1 status
+  sysmon status --all              # All instances summary
+
+  sysmon analyze                   # Full local analysis
+  sysmon analyze --with-cpu        # Include CPU/memory metrics
+  sysmon analyze --output report.md
+
+  sysmon dashboard                 # Full 4-table dashboard
+  sysmon dashboard --quick         # Skip DB volume sizing
+  sysmon dashboard --animate       # Live auto-updating dashboard
+  sysmon dashboard --animate --interval 5  # Custom refresh rate
+
+  sysmon projects                  # All projects, both instances
+  sysmon projects --instance 1     # Projects on Instance 1 only
+  sysmon projects --project <name> # Detailed view of single project
+
+  sysmon cleanup docker            # Docker cleanup
+  sysmon cleanup docker --all-containers  # Stop and remove all containers
+  sysmon cleanup docker --instance 1      # Clean Docker on Instance 1
+  sysmon cleanup builds            # Build artifact cleanup
+  sysmon cleanup builds --include-node-modules  # Include node_modules
+  sysmon cleanup builds --all-instances   # Clean builds on all instances
+  sysmon cleanup caches            # Clean npm/cargo/claude caches
+  sysmon cleanup processes         # Kill language servers
+  sysmon cleanup memory            # Clear system memory cache
+  sysmon cleanup preserves         # Clean old backups (keep 3)
+
+  sysmon nuke                      # Aggressive full cleanup (local)
+  sysmon nuke --all-instances      # Nuke all EC2 instances
+
+  sysmon report                    # Generate markdown report
+  sysmon report --format json      # JSON output
+
+  sysmon help analyze              # Command-specific help
+
+Animated Mode Controls:
+  q, Esc         Quit dashboard
+  r, Space       Refresh now
+  +, -           Increase/decrease refresh interval
+  1, 2, 3        Focus Instance 1, 2, or Local
+  a              Show all instances (default)
+  d              Toggle detailed view
+  h, ?           Show help overlay
+
+Configuration:
+  Environment variables can override defaults:
+    SYSMON_SSH_KEY          SSH key path (e.g. ~/.ssh/my-key.pem; injected from sega.toml via the sega CLI)
+    SYSMON_INSTANCE1_IP     Instance 1 IP (e.g. 203.0.113.10; injected from sega.toml via the sega CLI)
+    SYSMON_INSTANCE2_IP     Instance 2 IP (e.g. 203.0.113.20; injected from sega.toml via the sega CLI)
+    SYSMON_INSTANCE3_IP     Instance 3 IP (e.g. 203.0.113.30; injected from sega.toml via the sega CLI)
+    SYSMON_DISK_WARNING     Disk warning threshold % (default: 75)
+    SYSMON_DISK_CRITICAL    Disk critical threshold % (default: 90)
+    SYSMON_DRY_RUN          Enable dry-run mode (default: false)
+    SYSMON_VERBOSE          Enable verbose mode (default: false)
+    SYSMON_QUIET            Enable quiet mode (default: false)
+    SYSMON_ANIMATE          Enable animated mode (default: false)
+    SYSMON_REFRESH_INTERVAL Refresh interval in seconds (default: 3)
+
+EOF
+}
+
+show_command_help() {
+    local cmd="$1"
+
+    # Handle cleanup specially since it has subcommands
+    if [[ "$cmd" == "cleanup" ]]; then
+        cat << 'EOF'
+sysmon cleanup - Cleanup operations
+
+Usage: sysmon cleanup <subcommand> [options]
+
+Subcommands:
+  docker      Docker cleanup (images, containers, cache, volumes)
+  builds      Build artifact cleanup (.next, dist, __pycache__, pytest/mypy cache)
+  caches      System cache cleanup (npm, cargo, claude)
+  processes   Kill development processes (language servers, watchers)
+  memory      Clear system memory cache (drop_caches)
+  preserves   Backup/preserve cleanup with retention policy
+
+Remote Execution:
+  All cleanup subcommands support --instance <N> and --all-instances flags
+  to run on EC2 instances (1, 2, or 3).
+
+Examples:
+  sysmon cleanup docker              # Interactive Docker cleanup
+  sysmon cleanup docker --all-containers  # Stop and remove ALL containers
+  sysmon cleanup docker --instance 1 # Clean Docker on Instance 1
+  sysmon cleanup builds              # Standard build artifacts
+  sysmon cleanup builds --include-node-modules  # Include node_modules
+  sysmon cleanup builds --all-instances   # Clean all EC2 instances
+  sysmon cleanup caches              # All system caches
+  sysmon cleanup processes           # Kill language servers
+  sysmon cleanup processes --all-instances  # Kill on all instances
+  sysmon cleanup memory              # Clear local memory cache
+  sysmon cleanup memory --all-instances    # Clear on all instances
+  sysmon cleanup preserves           # Keep 3 most recent backups
+
+Run 'sysmon cleanup <subcommand> --help' for subcommand-specific help.
+EOF
+        return 0
+    fi
+
+    local cmd_file="${SYSMON_COMMANDS_DIR}/${cmd}.sh"
+
+    if [[ -f "$cmd_file" ]]; then
+        # Source command and call its help function if it exists
+        source "$cmd_file"
+        if declare -f "cmd_${cmd}_help" > /dev/null; then
+            "cmd_${cmd}_help"
+        else
+            echo "No detailed help available for '$cmd'"
+            echo "Run 'sysmon help' for general usage"
+        fi
+    else
+        log_error "Unknown command: $cmd"
+        echo "Run 'sysmon help' for available commands"
+        exit 1
+    fi
+}
+
+# ============================================================================
+# ARGUMENT PARSING
+# ============================================================================
+
+parse_global_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --help|-h)
+                # For cleanup command, pass --help to subcommand instead of intercepting
+                if [[ "$SYSMON_COMMAND" == "cleanup" && ${#SYSMON_ARGS[@]} -gt 0 ]]; then
+                    SYSMON_ARGS+=("$1")
+                    shift
+                elif [[ -n "$SYSMON_COMMAND" ]]; then
+                    show_command_help "$SYSMON_COMMAND"
+                    exit 0
+                else
+                    show_help
+                    exit 0
+                fi
+                ;;
+            --version|-v)
+                show_version
+                exit 0
+                ;;
+            --dry-run)
+                SYSMON_DRY_RUN="true"
+                shift
+                ;;
+            --verbose)
+                SYSMON_VERBOSE="true"
+                shift
+                ;;
+            --quiet|-q)
+                SYSMON_QUIET="true"
+                shift
+                ;;
+            --animate)
+                SYSMON_ANIMATE="true"
+                # Source display libraries when animate mode is requested
+                if ! source_display_libs; then
+                    log_error "Display libraries not found. Animated mode requires lib/display/"
+                    exit 1
+                fi
+                # Also pass to command
+                SYSMON_ARGS+=("$1")
+                shift
+                ;;
+            --interval)
+                if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
+                    SYSMON_REFRESH_INTERVAL="$2"
+                    SYSMON_ARGS+=("$1" "$2")
+                    shift 2
+                else
+                    log_error "--interval requires a numeric value"
+                    exit 1
+                fi
+                ;;
+            -*)
+                # Unknown flag - pass to command
+                SYSMON_ARGS+=("$1")
+                shift
+                ;;
+            *)
+                if [[ -z "$SYSMON_COMMAND" ]]; then
+                    SYSMON_COMMAND="$1"
+                else
+                    SYSMON_ARGS+=("$1")
+                fi
+                shift
+                ;;
+        esac
+    done
+}
+
+# ============================================================================
+# COMMAND DISPATCH
+# ============================================================================
+
+run_command() {
+    local cmd="$1"
+    shift
+    local args=("$@")
+
+    # Handle special commands
+    case "$cmd" in
+        help)
+            if [[ ${#args[@]} -gt 0 ]]; then
+                show_command_help "${args[0]}"
+            else
+                show_help
+            fi
+            return 0
+            ;;
+        "")
+            show_help
+            return 0
+            ;;
+    esac
+
+    # Handle cleanup subcommands specially
+    if [[ "$cmd" == "cleanup" ]]; then
+        if [[ ${#args[@]} -eq 0 ]]; then
+            log_error "cleanup requires a subcommand: docker, builds, caches, processes, memory, preserves"
+            echo "Usage: sysmon cleanup <docker|builds|caches|processes|memory|preserves> [options]"
+            exit 1
+        fi
+
+        local subcmd="${args[0]}"
+        local cmd_file="${SYSMON_COMMANDS_DIR}/cleanup-${subcmd}.sh"
+
+        if [[ ! -f "$cmd_file" ]]; then
+            log_error "Unknown cleanup subcommand: $subcmd"
+            echo "Available: docker, builds, caches, processes, memory, preserves"
+            exit 1
+        fi
+
+        # Source and run the cleanup command
+        source "$cmd_file"
+        local remaining_args=("${args[@]:1}")
+        "cmd_cleanup_${subcmd}" ${remaining_args[@]+"${remaining_args[@]}"}
+        return $?
+    fi
+
+    # Standard command dispatch
+    local cmd_file="${SYSMON_COMMANDS_DIR}/${cmd}.sh"
+
+    if [[ ! -f "$cmd_file" ]]; then
+        log_error "Unknown command: $cmd"
+        echo "Run 'sysmon help' for available commands"
+        exit 1
+    fi
+
+    # Source the command file
+    source "$cmd_file"
+
+    # Call the command's main function
+    local cmd_func="cmd_${cmd}"
+    if declare -f "$cmd_func" > /dev/null; then
+        # ${arr[@]+...} guard: `set -u` errors on an empty array expansion under
+        # bash < 4.4 (macOS 3.2) — e.g. `sysmon status` with no extra args.
+        "$cmd_func" ${args[@]+"${args[@]}"}
+    else
+        log_error "Command '$cmd' is missing its entry function: $cmd_func"
+        exit 1
+    fi
+}
+
+# ============================================================================
+# MAIN ENTRY POINT
+# ============================================================================
+
+main() {
+    # Parse arguments
+    parse_global_args "$@"
+
+    # Run the command.
+    # ${arr[@]+"${arr[@]}"} guards against `set -u` erroring on an empty array
+    # under bash < 4.4 (macOS ships 3.2): expands to nothing when SYSMON_ARGS is
+    # empty (e.g. `sysmon status`), to the quoted elements when set.
+    run_command "$SYSMON_COMMAND" ${SYSMON_ARGS[@]+"${SYSMON_ARGS[@]}"}
+}
+
+# Run main if executed directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

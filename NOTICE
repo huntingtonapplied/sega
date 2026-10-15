@@ -1,0 +1,6 @@
+SEGA
+Copyright 2022-2026 Huntington Applied / Huntington Applied
+
+Ansible is an optional external tool invoked via subprocess; users install
+Ansible (GPLv3) separately. The optional ansible-runner dependency is
+Apache-2.0.

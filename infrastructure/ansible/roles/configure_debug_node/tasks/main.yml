@@ -1,0 +1,32 @@
+- name: Get images
+  become: true
+  shell: docker compose images --format json | jq -r '.[] | "\(.Repository):\(.Tag)"'
+  register: xt_docker_images
+
+- name: xt_docker_images raw
+  ansible.builtin.debug:
+    msg: System {{ xt_docker_images }} 
+
+- name: xt_docker_images splitted
+  ansible.builtin.debug:
+    msg: System {{ xt_docker_images.stdout.splitlines() }} 
+
+- name: Tag images with "local"
+  become: true
+  shell: "docker tag {{ item }} {{ item | regex_replace(':.*', '') }}:local"
+  loop: "{{ xt_docker_images.stdout.splitlines() }}"
+
+- name: Update docker file to debug image
+  replace:
+    path: "{{ ansible_env.HOM }}/docker-compose.yml"
+    regexp: '(image:\s+[a-z-Z-._\/-]+):([a-z-Z-._-]+)'
+    replace: '\:local'
+
+- name: Check if the folder exists
+  stat:
+    path: "{{ ansible_env.HOM }}/src"
+  register: src_dir
+
+- name: Clone all source code
+  import_tasks: clone_code.yml
+  when: not src_dir.stat.exists

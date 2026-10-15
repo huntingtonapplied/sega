@@ -1,0 +1,47 @@
+---
+# install_omni_platform defaults
+# Configuration for all fleet projects
+
+# Platform installation root
+fleet_root: /opt/example
+
+# Git repository (optional - can also clone manually)
+fleet_git_repo: git@gitlab.com:example/example.git
+fleet_git_branch: main
+
+# All fleet projects
+omni_projects:
+  - atlas
+  - hermes
+  - orion
+  - sega
+
+# Project groupings by engine type (from sega.toml)
+simulation_engines:
+  - atlas
+
+workflow_engines:
+  - hermes
+
+utility_binaries:
+  - sega
+
+function_libraries: []
+
+no_engine:
+  - orion
+
+# Docker registry
+docker_registry: registry.gitlab.com/example
+
+# Database configuration
+postgres_host: localhost
+postgres_port: 5432
+postgres_user: example_user
+
+# Redis configuration
+redis_host: localhost
+redis_port: 6379
+
+# Metrics service
+metrics_tcp_port: 3308

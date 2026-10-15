@@ -1,0 +1,33 @@
+[Unit]
+Description=SEGA {{PROJECT_NAME}} Frontend ({{APP_NAME}}) - port {{PORT}}
+After=network.target
+PartOf=sega-{{PROJECT_NAME}}.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory={{FLEET_ROOT}}/{{PROJECT_NAME}}/{{APP_PATH}}
+Environment=NODE_ENV=production
+Environment=PORT={{PORT}}
+Environment=HOSTNAME=0.0.0.0
+
+# Start Next.js production server
+ExecStart=/usr/bin/npx next start -p {{PORT}} -H 0.0.0.0
+
+# Restart policy - recover automatically on crash
+Restart=always
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=5
+
+# Resource limits
+MemoryMax=1G
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sega-{{PROJECT_NAME}}-{{APP_NAME}}
+
+[Install]
+WantedBy=multi-user.target

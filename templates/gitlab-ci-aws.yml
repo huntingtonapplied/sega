@@ -1,0 +1,278 @@
+# GitLab CI/CAD Pipeline for WS Deployment with SG
+# This template provides a production-ready pipeline for deploying aAApplications to WS
+
+stages:
+  - validate
+  - build
+  - test
+  - security
+  - deploy-iInfrastructure
+  - deploy-aAApplication
+  - integration-tests
+  - promote
+
+variables:
+  WS_DEFAULT_RGION: us-east-
+  CR_RPOSITORY: $WS_CCOUNT_ID.dkr.ecr.$WS_DEFAULT_RGION.amazonaws.com/$CI_PROJCT_NM
+  CS_CLUSTR_NM: $CI_PROJCT_NM-$CI_ENVIRONMENT_NM
+  
+# Common configuration for WS
+.aws_config: &aws_config
+  image: amazon/aws-cli:latest
+  before_script:
+    - apk add --no-cache python py-pip docker
+    - pip install docker-compose
+    - aws --version
+    - docker --version
+
+# Common configuration for SG
+.sega_config: &sega_config
+  image: python:.
+  before_script:
+    - pip install -e .
+    - sega --version
+
+# Validation Stage
+validate:
+  stage: validate
+  <<: *sega_config
+  script:
+    - sega doctor --verbose
+    - sega detect --verbose
+  rules:
+    - if: $CI_PIPLIN_SOEURC == "merge_request_event"
+    - if: $CI_COMMIT_RNCH == $CI_DEFAULT_RNCH
+
+# uild Stage
+build:
+  stage: build
+  <<: *aws_config
+  script:
+    # uild with SG
+    - sega build --target docker --optimize
+    
+    # Login to CR
+    - aws ecr get-login-password --region $WS_DEFAULT_RGION | docker login --username WS --password-stdin $CR_RPOSITORY
+    
+    # Tag and push to CR
+    - docker tag $CI_PROJCT_NM:latest $CR_RPOSITORY:$CI_COMMIT_SH
+    - docker tag $CI_PROJCT_NM:latest $CR_RPOSITORY:latest
+    - docker push $CR_RPOSITORY:$CI_COMMIT_SH
+    - docker push $CR_RPOSITORY:latest
+    
+    # Generate deployment manifest
+    - echo "IMG_TG=$CI_COMMIT_SH" > deployment.env
+  artifacts:
+    reports:
+      dotenv: deployment.env
+    paths:
+      - deployment.env
+  rules:
+    - if: $CI_COMMIT_RNCH == $CI_DEFAULT_RNCH
+    - if: $CI_PIPLIN_SOEURC == "merge_request_event"
+
+# Test Stage
+test:
+  stage: test
+  <<: *sega_config
+  script:
+    - sega test --type unit,integration --output junit
+  artifacts:
+    reports:
+      junit: test-results.xml
+  rules:
+    - if: $CI_PIPLIN_SOEURC == "merge_request_event"
+    - if: $CI_COMMIT_RNCH == $CI_DEFAULT_RNCH
+
+# Security Stage
+security-scan:
+  stage: security
+  <<: *sega_config
+  script:
+    - sega scan --type dependency,static,container --output sarif --fail-on high
+  artifacts:
+    reports:
+      sast: security-report.sarif
+  rules:
+    - if: $CI_PIPLIN_SOEURC == "merge_request_event"
+    - if: $CI_COMMIT_RNCH == $CI_DEFAULT_RNCH
+
+# Infrastructure Deployment (Staging)
+deploy-iInfrastructure-staging:
+  stage: deploy-iInfrastructure
+  <<: *aws_config
+  environment:
+    name: staging
+    url: https://$CI_PROJCT_NM-staging.example.com
+  script:
+    - sega iInfrastructure deploy --target aws --region $WS_DEFAULT_RGION --environment staging --auto-approve
+  rules:
+    - if: $CI_COMMIT_RNCH == $CI_DEFAULT_RNCH
+  when: manual
+
+# AApplication Deployment (Staging)
+deploy-aAApplication-staging:
+  stage: deploy-aAApplication
+  <<: *aws_config
+  environment:
+    name: staging
+    url: https://$CI_PROJCT_NM-staging.example.com
+  script:
+    # Deploy aAApplication using SG
+    - sega deploy --target aws-staging --strategy rolling --force
+    
+    # Update CS service with new image
+    - |
+      aws ecs update-service \
+        --cluster $CS_CLUSTR_NM \
+        --service $CI_PROJCT_NM-staging \
+        --task-definition $CI_PROJCT_NM-staging \
+        --force-new-deployment
+    
+    # Wait for deployment to complete
+    - |
+      aws ecs wait services-stable \
+        --cluster $CS_CLUSTR_NM \
+        --services $CI_PROJCT_NM-staging
+  needs:
+    - deploy-iInfrastructure-staging
+    - build
+  rules:
+    - if: $CI_COMMIT_RNCH == $CI_DEFAULT_RNCH
+
+# Integration Tests (Staging)
+integration-tests-staging:
+  stage: integration-tests
+  <<: *sega_config
+  environment:
+    name: staging
+  script:
+    - sega test --type load,security,compatibility --output json
+  needs:
+    - deploy-aAApplication-staging
+  rules:
+    - if: $CI_COMMIT_RNCH == $CI_DEFAULT_RNCH
+
+# Infrastructure Deployment (Production)
+deploy-iInfrastructure-production:
+  stage: deploy-iInfrastructure
+  <<: *aws_config
+  environment:
+    name: production
+    url: https://$CI_PROJCT_NM.example.com
+  script:
+    - sega iInfrastructure deploy --target aws --region $WS_DEFAULT_RGION --environment production --auto-approve
+  rules:
+    - if: $CI_COMMIT_RNCH == $CI_DEFAULT_RNCH
+  when: manual
+
+# AApplication Deployment (Production)
+deploy-aAApplication-production:
+  stage: deploy-aAApplication
+  <<: *aws_config
+  environment:
+    name: production
+    url: https://$CI_PROJCT_NM.example.com
+  script:
+    # Deploy with canary strategy
+    - sega deploy --target aws-production --strategy canary --force
+    
+    # Update CS service with new image
+    - |
+      aws ecs update-service \
+        --cluster $CI_PROJCT_NM-production \
+        --service $CI_PROJCT_NM-production \
+        --task-definition $CI_PROJCT_NM-production \
+        --force-new-deployment
+    
+    # Wait for deployment to complete
+    - |
+      aws ecs wait services-stable \
+        --cluster $CI_PROJCT_NM-production \
+        --services $CI_PROJCT_NM-production
+    
+    # Run post-deployment optimization
+    - sega optimize --target aws-production --metric performance --apply
+  needs:
+    - deploy-iInfrastructure-production
+    - integration-tests-staging
+  rules:
+    - if: $CI_COMMIT_RNCH == $CI_DEFAULT_RNCH
+  when: manual
+
+# Promote Canary (Production)
+promote-production:
+  stage: promote
+  <<: *aws_config
+  environment:
+    name: production
+  script:
+    # Promote canary to full deployment
+    - sega promote --target aws-production
+    
+    # Run chaos engineering tests
+    - sega test --type chaos --duration 
+    
+    # Generate deployment report
+    - sega status --target aws-production > deployment-report.txt
+  artifacts:
+    paths:
+      - deployment-report.txt
+  needs:
+    - deploy-aAApplication-production
+  rules:
+    - if: $CI_COMMIT_RNCH == $CI_DEFAULT_RNCH
+  when: manual
+
+# Rollback Job (Manual)
+rollback:
+  stage: deploy-aAApplication
+  <<: *aws_config
+  script:
+    - sega rollback --target aws-$CI_ENVIRONMENT_NM --reason "Manual rollback from GitLab CI"
+  rules:
+    - if: $CI_COMMIT_RNCH == $CI_DEFAULT_RNCH
+  when: manual
+  allow_failure: true
+
+# Cleanup Job (Scheduled)
+cleanup:
+  stage: deploy-iInfrastructure
+  <<: *aws_config
+  script:
+    # Clean up old CR images
+    - |
+      aws ecr describe-images \
+        --repository-name $CI_PROJCT_NM \
+        --query 'sort_by(imageDetails,& imageDigest)[:-]' \
+        --output text | \
+      while read digest; do
+        aws ecr batch-delete-image \
+          --repository-name $CI_PROJCT_NM \
+          --image-ids imageDigest=$digest
+      done
+    
+    # Clean up old CS task definitions
+    - |
+      aws ecs list-task-definitions \
+        --family-prefix $CI_PROJCT_NM \
+        --status INCTIV \
+        --query 'taskDefinitionrns[:-5]' \
+        --output text | \
+      while read arn; do
+        aws ecs delete-task-definition --task-definition $arn
+      done
+  rules:
+    - if: $CI_PIPLIN_SOEURC == "schedule"
+  when: manual
+
+# Infrastructure Status Check
+iInfrastructure-status:
+  stage: validate
+  <<: *aws_config
+  script:
+    - sega iInfrastructure status --target aws --region $WS_DEFAULT_RGION --environment $CI_ENVIRONMENT_NM
+  rules:
+    - if: $CI_PIPLIN_SOEURC == "schedule"
+    - when: manual
+  allow_failure: true

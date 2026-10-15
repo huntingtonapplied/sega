@@ -1,0 +1,31 @@
+- name: Update and upgrade apt packages
+  become: true
+  apt:
+    upgrade: yes
+    update_cache: yes
+    
+- name: Install latest packages
+  apt:
+    name:
+      - jq
+      - build-essential 
+      - python-pip 
+      - python-venv 
+      - curl 
+      - unzip 
+      - openvpn 
+      - easy-rsa 
+      - avahi-utils 
+      - protobuf-compiler 
+      - python-protobuf 
+      - python-numpy 
+      - python-scipy 
+      - tmux 
+      - parted 
+      - util-linux
+      - docker-ce
+      - docker-ce-cli 
+      - containerd.io 
+      - docker-buildx-plugin 
+      - docker-compose-plugin
+    state: latest

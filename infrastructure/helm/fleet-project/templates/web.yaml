@@ -1,0 +1,104 @@
+{{- $root := . -}}
+{{- $name := include "fleet-project.name" . -}}
+{{- $ns := include "fleet-project.namespace" . -}}
+{{- range $svc, $cfg := .Values.web }}
+{{- $full := printf "%s-%s" $name $svc -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $full }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" $root | nindent 4 }}
+    app: {{ $full }}
+    component: web
+spec:
+  replicas: {{ if hasKey $cfg "replicas" }}{{ $cfg.replicas }}{{ else }}1{{ end }}
+  selector:
+    matchLabels:
+      app: {{ $full }}
+  template:
+    metadata:
+      labels:
+        {{- include "fleet-project.labels" $root | nindent 8 }}
+        app: {{ $full }}
+        component: web
+    spec:
+      {{- with $root.Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $svc }}
+          image: {{ include "fleet-project.image" (dict "root" $root "image" $cfg.image) }}
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          {{- with $cfg.command }}
+          # args (NOT command): keep the image ENTRYPOINT (entrypoint.sh), which
+          # dispatches "backend"->gunicorn. command: would run "backend" as a bare
+          # executable -> "executable file not found in $PATH".
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ $cfg.port }}
+          env:
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $name }}-config
+                  key: redis_url
+            - name: POSTGRESQL_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet-project.secretName" $root }}
+                  key: postgresql_url
+            # TimescaleDB is an extension in the same DB (db_model create_timescale_tables
+            # + startup create_all read this; unset → localhost:5009 default → schema never built).
+            - name: TIMESCALEDB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet-project.secretName" $root }}
+                  key: postgresql_url
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet-project.secretName" $root }}
+                  key: redis_password
+            {{- with $cfg.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if $cfg.healthPath }}
+          readinessProbe:
+            httpGet:
+              path: {{ $cfg.healthPath }}
+              port: {{ $cfg.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ $cfg.healthPath }}
+              port: {{ $cfg.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          {{- end }}
+          resources:
+            {{- toYaml ($cfg.resources | default dict) | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $full }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" $root | nindent 4 }}
+    app: {{ $full }}
+spec:
+  selector:
+    app: {{ $full }}
+  ports:
+    - name: http
+      port: {{ $cfg.port }}
+      targetPort: {{ $cfg.port }}
+{{- end }}

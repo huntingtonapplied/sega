@@ -1,0 +1,49 @@
+#cloud-config
+# Makes a fresh node swarm-ready: docker + tailscale + EFS mounted at drop_path.
+# It does NOT init/join the swarm — sega's SwarmDeployer does that over SSH after
+# apply (reusing its inventory-driven _ensure_swarm), so no SSM token dance here.
+hostname: ${hostname}
+preserve_hostname: false
+%{ if debug_ssh_key != "" ~}
+ssh_authorized_keys:
+  - ${debug_ssh_key}
+%{ endif ~}
+
+package_update: true
+packages:
+  - ca-certificates
+  - curl
+  - nfs-common          # EFS mount helper (uses NFS4.1)
+
+runcmd:
+  # --- docker ---
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  - usermod -aG docker ubuntu
+  # --- tailscale (self-join the tailnet with the pre-auth key) ---
+  - curl -fsSL https://tailscale.com/install.sh | sh
+  # NOTE: no --ssh. Tailscale SSH is intercepted by the tailnet ACL (action "check" =
+  # interactive re-auth), which breaks the headless deployer's SSH. The deployer reaches
+  # nodes over the tailnet via regular sshd + the provisioned key (debug_ssh_key / a fleet
+  # key). Re-enable --ssh only if the tailnet SSH ACL is set to "accept" for the deployer.
+  - tailscale up --authkey=${ts_authkey} --hostname=${hostname}
+  # --- data dirs the stack bind-mounts: the shared store (drop_path), the redis data
+  #     dir, and /opt/swarm for staged crafts/etc/sim-config (deployer scps them here).
+  #     A bare cloud node has none of these; swarm-up makes them on single-host. ---
+  - mkdir -p ${drop_path} /opt/swarm/redis /opt/swarm/crafts /opt/swarm/etc
+  # writable by the ubuntu user (deployer scps staged assets in) AND the containers
+  # (which run as assorted UIDs and write samples/checkpoints to the shared store).
+  - chmod -R 0777 /opt/swarm
+%{ if use_efs ~}
+  - echo "${efs_id}.efs.${region}.amazonaws.com:/ ${drop_path} nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev 0 0" >> /etc/fstab
+  - mount -a
+%{ endif ~}
+  # --- TTL backstop: self-terminate after ttl_minutes (0 = disabled). Pairs with
+  #     instance_initiated_shutdown_behavior=terminate so `shutdown` = terminate. ---
+%{ if ttl_minutes > 0 ~}
+  - 'shutdown -h +${ttl_minutes} "swarm-fleet TTL - auto-terminating after ${ttl_minutes} min"'
+%{ endif ~}

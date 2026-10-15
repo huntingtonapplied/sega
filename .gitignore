@@ -1,0 +1,562 @@
+# HL Master .gitignore - Comprehensive Version
+# =============================================
+# This file MUST be used in LL HL projects to prevent tracking unwanted files
+
+# CRITICL: Virtual nvironments - NVR track these
+venv/
+.venv/
+env/
+.env/
+NV/
+.NV/
+virtualenv/
+.virtualenv/
+**/venv/
+**/.venv/
+**/env/
+**/.env/
+**/NV/
+**/.NV/
+**/virtualenv/
+**/.virtualenv/
+*_venv/
+**/*_venv/
+fleet_venv/
+**/fleet_venv/
+*-venv/
+**/*-venv/
+.python-version
+pyvenv.cfg
+
+# CRITICL: Node Modules - NVR track these
+node_modules/
+**/node_modules/
+.npm/
+**/.npm/
+.pnpm/
+**/.pnpm/
+.yarn/
+**/.yarn/
+npm-cache/
+**/npm-cache/
+.npm-cache/
+**/.npm-cache/
+bower_components/
+**/bower_components/
+
+# CRITICL: Signal iles - NVR track these
+*.sigmf
+*.sigmf-data
+*.sigmf-meta
+**/*.sigmf
+**/*.sigmf-data
+**/*.sigmf-meta
+*.sigmf-*
+**/*.sigmf-*
+
+# CRITICL: Internal Directories - NVR track these
+_internal/
+**/_internal/
+__internal__/
+**/__internal__/
+.internal/
+**/.internal/
+
+# Environment Configuration
+# Real .env files are IGNORED. Only .env.example templates are tracked.
+.env
+.env.*
+**/.env
+**/.env.*
+.env.test
+# Keep example templates tracked
+!.env.example
+!**/.env.example
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+pip-wheel-metadata/
+*.egg-info/
+.installed.cfg
+*.egg
+MNIST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+htmlcov/
+.scrapy
+docs/_build/
+doc/_build/
+target/
+.ipynb_checkpoints
+profile_default/
+ipython_config.py
+__pypackages__/
+celerybeat-schedule
+celerybeat.pid
+.spyderproject
+.spyproject
+.ropeproject
+.webassets-cache
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+cython_debug/
+
+# JavaScript/Node
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+pids/
+*.pid
+*.seed
+*.pid.lock
+lib-cov/
+coverage/
+.nyc_output/
+.grunt/
+.lock-wscript
+.node_repl_history
+*.tgz
+.yarn-integrity
+.cache/
+.cache-loader/
+.parcel-cache/
+.next/
+out/
+.nuxt/
+dist/
+.gatsby/
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.vscode-test/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+.eslintcache
+*.tsbuildinfo
+
+# Rust
+debug/
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# Database
+*.db
+*.sqlite
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+
+# OS iles
+.DS_Store
+**/.DS_Store
+.DS_Store?
+._*
+.Spotlight-V
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RCYCL.IN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# IDs and ditors
+.vscode/
+.vscode-test/
+.idea/
+.project
+.classpath
+.c/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+.atom/
+nbproject/
+.netbeans/
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+*.temp
+.*.swp
+.*.swo
+Session.vim
+Sessionx.vim
+.netrwhist
+tags
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Temporary iles
+tmp/
+temp/
+.tmp/
+.temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+*.original
+*.~*
+~*
+
+# Logs and Runtime
+logs/
+*.log
+runtime/
+*.lock
+!package-lock.json
+!yarn.lock
+!Pipfile.lock
+!poetry.lock
+
+# Test Coverage
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+test-results/
+jest-results/
+
+# uild Outputs
+build/
+dist/
+out/
+output/
+bin/
+obj/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+
+# Package iles
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+*.z
+
+# Documentation uild
+docs/_build/
+doc/_build/
+site/
+_site/
+.jekyll-cache/
+.jekyll-metadata
+
+# Certificates and Keys
+*.pem
+*.key
+*.crt
+*.csr
+*.p
+*.pfx
+*.pub
+*.ppk
+!test/**/*.pem
+!test/**/*.key
+!test/**/*.crt
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+docker-compose.*.yml
+!docker-compose.test.yml
+!docker-compose.dev.yml
+!docker-compose.prod.yml
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Secrets and Credentials
+secrets/
+.secrets/
+credentials/
+.credentials/
+*.secret
+*.secrets
+.fleet_credentials/
+.credential_backups/
+*_credentials_*.json
+*_backup_*.enc
+
+# Monitoring and Profiling
+*.prof
+*.lprof
+.prof/
+profiling/
+
+# Cache Directories
+.cache/
+.sass-cache/
+.parcel-cache/
+.webpack-cache/
+.npm-cache/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.phpunit.result.cache
+.php_cs.cache
+.php-cs-fixer.cache
+
+# Dependency Directories
+vendor/
+bower_components/
+jspm_packages/
+typings/
+.pnpm-store/
+.yarn-cache/
+
+# nvironment Specific
+.direnv/
+.envrc
+.python-version
+.ruby-version
+.nvmrc
+.node-version
+.tool-versions
+
+# HL Specific
+environments/fleet_venv/
+environments/node_modules/
+environments/.npm-cache/
+environments/pnpm-store/
+environments/rust_shared/
+environments/*.pyc
+environments/__pycache__/
+environments/package-lock.json
+environments/package.json
+environments/.pnpm/
+environments/.yarn/
+environments/target/
+environments/Cargo.lock
+!environments/project_credentials.py
+!environments/unlock_credentials.py
+!environments/RDM.md
+
+# Keep Important iles
+!.gitignore
+!.gitkeep
+!RDM.md
+!LICNS
+!Makefile
+!Dockerfile
+!docker-compose.yml
+!requirements.txt
+!package.json
+!pyproject.toml
+!Cargo.toml
+
+# rchive and ackup
+.archive/
+backups/
+*.backup
+*.bak
+*.old
+archive/
+backup/
+
+# Large inary iles
+*.iso
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.msi
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Media iles (optional - uncomment if needed)
+# *.jpg
+# *.jpeg
+# *.png
+# *.gif
+# *.ico
+# *.mov
+# *.mp
+# *.mp
+# *.flv
+# *.fla
+# *.swf
+# *.pdf
+
+# Data iles
+*.csv
+*.dat
+*.data
+*.db
+*.sqlite
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.msgpack
+*.parquet
+*.feather
+*.arrow
+
+# Claude/I Specific
+.claude/settings.local.json
+.claude/cache/
+.ai/
+.copilot/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+.jupyter/
+
+# MacOS
+.ppleDouble
+.LSOverride
+Icon
+Network Trash older
+Temporary Items
+.apdisk
+.fseventsd/
+
+# Windows
+Desktop.ini
+$RCYCL.IN/
+*.stackdump
+[Dd]esktop.ini
+
+# Linux
+*~
+.directory
+.Trash-*
+.nfs*
+
+# Shared Dependencies
+.shared/
+shared_dependencies/
+.npm-global/
+.yarn-global/
+
+# Generated iles
+*.generated
+*.generated.*
+*_generated.*
+*.auto.*
+*_pb.py
+*_pb_grpc.py
+*.proto.py
+
+# Miscellaneous
+.history/
+.vscode-server/
+.devcontainer/
+*.code-workspace
+.favorites.json
+tsconfig.tsbuildinfo
+
+# Mobile/Native builds
+# ndroid build artifacts (keep source)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/**/*.iml
+android/.idea/
+# iOS build artifacts (keep source)
+ios/build/
+ios/Pods/
+ios/Podfile.lock
+ios/**/*.xcworkspace/xcuserdata/
+ios/**/*.xcodeproj/xcuserdata/
+*.apk
+*.aab
+*.ipa
+.expo/
+# Backup files (history cleanup)
+*.backup
+*.backup_*
+*.boxbak
+.backups/
+
+# Node modules
+node_modules/
+node_modules.backup*/
+expo/node_modules.backup*/
+
+# MongoDB data
+data/WiredTiger*
+data/journal/
+
+
+# SEGA runtime directory (test configs, benchmarks, etc.)
+.sega/
+
+# Legacy SEGA config (if migrating)
+.sega.yml.bak

@@ -1,0 +1,158 @@
+services:
+  {% if engine_services.engine | default(true) %}
+  engine:
+    image: {{ engine_image | default(docker_registry + '/example/engine:latest') }}
+    {% if engine_command | default('') %}
+    command: {{ engine_command }}
+    {% endif %}
+    hostname: {{ engine_hostname | default(deployment_name) }}
+    restart: always
+    network_mode: {{ engine_network_mode | default('host') }}
+    init: true
+    volumes:
+      - /var/run/dbus:/var/run/dbus
+      - /var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone
+      - {{ ansible_env.HOME }}/fleet_engine/config:/engine/etc
+      - engine-data-volume:/data
+      {% for volume in engine_volumes | default([]) %}
+      - {{ volume }}
+      {% endfor %}
+    {% if engine_devices | default([]) | length > 0 %}
+    devices:
+      {% for device in engine_devices %}
+      - {{ device }}
+      {% endfor %}
+    {% endif %}
+    {% if engine_ports | default([]) | length > 0 %}
+    ports:
+      {% for port in engine_ports %}
+      - {{ port }}
+      {% endfor %}
+    {% endif %}
+    environment:
+      {% for key, value in (engine_environment | default({})).items() %}
+      {{ key }}: {{ value }}
+      {% endfor %}
+    logging:
+      driver: json-file
+      options:
+        max-size: {{ log_max_size | default('10m') }}
+        max-file: {{ log_max_files | default('3') }}
+  {% endif %}
+
+  {% if engine_services.monitor | default(false) %}
+  monitor:
+    image: {{ monitor_image | default(docker_registry + '/example/monitor:latest') }}
+    restart: always
+    init: true
+    volumes:
+      - /var/run/dbus:/var/run/dbus
+      - /var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone
+      - engine-data-volume:/data
+    ports:
+      {% for port in monitor_ports | default(['8080:8080']) %}
+      - {{ port }}
+      {% endfor %}
+    depends_on:
+      - engine
+    profiles:
+      - monitor
+    environment:
+      {% for key, value in (monitor_environment | default({})).items() %}
+      {{ key }}: {{ value }}
+      {% endfor %}
+    logging:
+      driver: json-file
+      options:
+        max-size: {{ log_max_size | default('10m') }}
+        max-file: {{ log_max_files | default('3') }}
+  {% endif %}
+
+  {% if engine_services.processor | default(false) %}
+  processor:
+    image: {{ processor_image | default(docker_registry + '/example/processor:latest') }}
+    {% if processor_command | default('') %}
+    command: {{ processor_command }}
+    {% endif %}
+    restart: always
+    init: true
+    volumes:
+      - /var/run/dbus:/var/run/dbus
+      - /var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone
+      - {{ ansible_env.HOME }}/fleet_engine/config:/processor/etc
+      - engine-data-volume:/data
+    {% if processor_ports | default([]) | length > 0 %}
+    ports:
+      {% for port in processor_ports %}
+      - {{ port }}
+      {% endfor %}
+    {% endif %}
+    depends_on:
+      - engine
+    profiles:
+      - processor
+    environment:
+      {% for key, value in (processor_environment | default({})).items() %}
+      {{ key }}: {{ value }}
+      {% endfor %}
+    logging:
+      driver: json-file
+      options:
+        max-size: {{ log_max_size | default('10m') }}
+        max-file: {{ log_max_files | default('3') }}
+  {% endif %}
+
+  {% if engine_services.interface | default(false) %}
+  interface:
+    image: {{ interface_image | default(docker_registry + '/example/interface:latest') }}
+    {% if interface_command | default('') %}
+    command: {{ interface_command }}
+    {% endif %}
+    restart: always
+    init: true
+    volumes:
+      - /var/run/dbus:/var/run/dbus
+      - /var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone
+      - {{ ansible_env.HOME }}/fleet_engine/config:/interface/etc
+    {% if interface_devices | default([]) | length > 0 %}
+    devices:
+      {% for device in interface_devices %}
+      - {{ device }}
+      {% endfor %}
+    {% endif %}
+    {% if interface_ports | default([]) | length > 0 %}
+    ports:
+      {% for port in interface_ports %}
+      - {{ port }}
+      {% endfor %}
+    {% endif %}
+    depends_on:
+      - engine
+    profiles:
+      - interface
+    environment:
+      {% for key, value in (interface_environment | default({})).items() %}
+      {{ key }}: {{ value }}
+      {% endfor %}
+    logging:
+      driver: json-file
+      options:
+        max-size: {{ log_max_size | default('10m') }}
+        max-file: {{ log_max_files | default('3') }}
+  {% endif %}
+
+volumes:
+  engine-data-volume:
+    driver: local
+    driver_opts:
+      type: none
+      device: {{ ansible_env.HOME }}/fleet_engine/data
+      o: bind

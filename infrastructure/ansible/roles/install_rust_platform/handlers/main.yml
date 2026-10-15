@@ -1,0 +1,7 @@
+---
+# Handlers for install_rust_platform role
+
+- name: reload systemd
+  become: true
+  systemd:
+    daemon_reload: yes

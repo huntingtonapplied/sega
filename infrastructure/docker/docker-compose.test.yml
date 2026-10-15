@@ -1,0 +1,43 @@
+# Docker Compose for SEGA Test Infrastructure
+# PostgreSQL for backend tests, Redis for testing real-time features
+
+services:
+  test-db:
+    image: postgres:15-alpine
+    user: "${APP_UID:-1005}:${APP_GID:-1005}"
+    environment:
+      POSTGRES_DB: test_sega
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+    ports:
+      - "5433:5432"
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+      - ./tests/fixtures/sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d test_sega"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sega-test
+
+  test-redis:
+    image: redis:7-alpine
+    user: "${APP_UID:-1005}:${APP_GID:-1005}"
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - sega-test
+
+volumes:
+  test_postgres_data:
+
+networks:
+  sega-test:
+    driver: bridge

@@ -1,0 +1,23 @@
+- name: Install latest packages
+  apt:
+    name:
+      - openvpn
+    state: latest
+
+- name: get ovpn 
+  shell: "aws secretsmanager get-secret-value --secret-id {{ deployment_name }}/vpn-client-config --query SecretString --output text > /etc/openvpn/client/sega-vpn-client.conf"
+
+- name: Creating aw config dir
+  file:
+    path: "/etc/systemd/system/openvpn-client.service.d"
+    state: directory
+
+- name: Copy compose
+  template:
+    dest: "/etc/systemd/system/openvpn-client.service.d/-restart.conf"
+    src: "../files/-restart.conf"
+
+- name: Restart service 
+  systemd:
+    name: openvpn-client@sega-vpn-client.service
+    state: restarted

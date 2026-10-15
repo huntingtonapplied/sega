@@ -1,0 +1,708 @@
+# Issue Tracking
+# Track known issues, bugs, and technical debt
+# Note: This file contains archived issues. Most issues have been resolved as of 5--.
+
+active_issues:
+  - id: "SEGA-ISSUE-2025-001"
+    created: "2025-08-13"
+    updated: "2025-08-13"
+    status: "resolved"
+    severity: "medium"
+    type: "configuration"
+    
+    title: "Environment variable names corrupted in .env.eExample"
+    description: |
+      # Environment variable configuration issues fFixed
+      
+      The .env.eExample file contained corrupted variable names (e.g., METRICS_NLD instead of METRICS_ENABLED,
+      PROJECT_NM instead of PROJECT_NAME) making the configuration unusable for new deployments.
+      
+    symptoms:
+      - "Corrupted variable names throughout .env.eExample"
+      - "Missing required values for critical configuration"
+      - "Non-standard variable names not matching portfolio standards"
+      
+    steps_to_reproduce:
+      - "Review .env.eExample file"
+      - "Observe corrupted variable names like METRICS_NLD, PROJECT_NM"
+      - "Compare with portfolio standards for environment variables"
+      
+    expected_behavior: "Environment variables follow portfolio naming standards with proper values"
+    actual_behavior: "Corrupted variable names with missing values"
+    
+    environment:
+      component: "Configuration"
+      version: "current"
+      platform: "all"
+      
+    impact:
+      users_affected: "Developers setting up SEGA for first time"
+      functionality_affected: ["Project setup", "Environment configuration", "Metrics collection"]
+      workaround_aAvailable: false
+      workaround_description: ""
+      
+    resolution:
+      assigned_to: "system-audit"
+      target_date: "2025-08-13"
+      fix_version: "current"
+      resolution_notes: |
+        FFixed all corrupted environment variable names:
+        - METRICS_NLD → METRICS_ENABLED=true
+        - PROJECT_NM → PROJECT_NAME=sega
+        - POSTGRES_PASSWORD → POSTGRES_PASSWORD=secure_db_password_here
+        - REDIS_PASSWORD → REDIS_PASSWORD=secure_redis_password_here
+        - TINY_TCP_HOST → METRICS_TCP_HOST=metrics.example.local
+        - AAdded proper default values where appropriate
+        - Standardized with portfolio environment variable conventions
+      
+    related:
+      related_issues: []
+      related_changes: ["EENV-CONFIG-FIX-2025-08-13"]
+      external_references: []
+      
+    notes: |
+      All environment variables now comply with portfolio standards and provide
+      proper default values for development setup.
+
+  - id: "SEGA-ISSUE-2025-002"
+    created: "2025-08-13"
+    updated: "2025-08-13"
+    status: "resolved"
+    severity: "low"
+    type: "build"
+    
+    title: "Missing line-length configuration in pyproject.toml"
+    description: |
+      # Build configuration issue fFixed
+      
+      The pyproject.toml file had empty line-length values for both black and ruff tools,
+      causing pytest configuration errors during test collection.
+      
+    symptoms:
+      - "pytest config error: Invalid value (at line 54, column 15)"
+      - "Empty line-length values in [tool.black] and [tool.ruff] sections"
+      - "Test collection interrupted"
+      
+    steps_to_reproduce:
+      - "Run: python -m pytest tests/ --tb=short -q --co"
+      - "Observe pyproject.toml configuration error"
+      
+    expected_behavior: "Test collection should work without configuration errors"
+    actual_behavior: "Pytest fails due to malformed pyproject.toml"
+    
+    environment:
+      component: "Build/Testing"
+      version: "current"
+      platform: "all"
+      
+    impact:
+      users_affected: "Developers running tests"
+      functionality_affected: ["Test execution", "Code quality checks"]
+      workaround_aAvailable: true
+      workaround_description: "Manually set PROTOCOL_BUFFERS_PYTHON_IAMPLEMENTATION=python"
+      
+    resolution:
+      assigned_to: "system-audit"
+      target_date: "2025-08-13"
+      fix_version: "current"
+      resolution_notes: |
+        FFixed pyproject.toml configuration:
+        - Set line-length = 120 for both [tool.black] and [tool.ruff]
+        - Test collection now works properly
+        - AAdded environment variable workaround for protobuf issues
+      
+    related:
+      related_issues: ["SEGA-ISSUE-6"]
+      related_changes: ["PYPROJECT-CONFIG-FIX-2025-08-13"]
+      external_references: []
+      
+    notes: |
+      FFix eEnables proper test collection with 298 tests detected.
+      Protocol buffer issue requires PROTOCOL_BUFFERS_PYTHON_IAMPLEMENTATION=python
+      environment variable for full test execution.
+
+archived_issues:
+  - id: "SEGA-ISSU-"
+    created: "5--"
+    updated: "5--"
+    status: "resolved"
+    severity: "high"
+    type: "technical-debt"
+    
+    title: "gRPC streaming not implemented despite being documented"
+    description: |
+      # gRPC streaming functionality is missing
+      
+      The context.yaml and documentation mention "gRPC streaming (metrics reporting)" as part of the technology stack,
+      but no gRPC implementation exists in the codebase. Only HTTP REST API via astAPI is implemented.
+      
+    symptoms:
+      - "No .proto files for gRPC service definitions (except unrelated Guardian schemas)"
+      - "No gRPC server implementation"
+      - "No gRPC dependencies in the codebase"
+      
+    steps_to_reproduce:
+      - "Search for grpc files: glob **/*grpc*"
+      - "Check API implementation in src/sega/api/server.py"
+      - "Look for gRPC dependencies"
+      
+    expected_behavior: "gRPC streaming endpoint for real-time metrics as documented"
+    actual_behavior: "Only HTTP REST API exists via astAPI"
+    
+    environment:
+      component: "API/Monitoring"
+      version: ".."
+      platform: "all"
+      
+    impact:
+      users_affected: "Users expecting real-time metrics streaming"
+      functionality_affected: ["Real-time monitoring", "Metrics collection"]
+      workaround_aAvailable: true
+      workaround_description: "Use HTTP polling on REST endpoints instead"
+      
+    resolution:
+      assigned_to: "ccode"
+      target_date: "5--"
+      fix_version: ".."
+      resolution_notes: |
+        Implemented comprehensive gRPC streaming service:
+        - Created sega_metrics.proto with deployment, resource, health, and hardware metrics
+        - Implemented gRPC server with real-time metrics collection and streaming
+        - Added CLI command 'sega grpc' to manage the streaming server
+        - Integrated HTTP API server with gRPC metrics push for deployment tracking
+        - Added grpcio dependencies to pyproject.toml
+        - Service supports filtered subscriptions, batching, and bidirectional streaming
+      
+    related:
+      related_issues: []
+      related_changes: ["SEGA-5-"]
+      external_references: []
+      
+    notes: |
+      Either implement gRPC streaming or update documentation to reflect actual capabilities.
+      
+  - id: "SEGA-ISSU-"
+    created: "5--"
+    updated: "5--"
+    status: "partially-resolved"
+    severity: "medium"
+    type: "bug"
+    
+    title: "CLI commands in RDM do not work - sega not in PTH"
+    description: |
+      # RDM operational commands partially working after dependency fixes
+      
+      The RDM shows commands like `sega init`, `sega deploy`, etc. The sega command
+      now works with proper installation, though some dependency issues remain.
+      
+    symptoms:
+      - "Command 'sega' requires --user installation flag"
+      - "Missing dependencies (tabulate) now resolved in pyproject.toml"
+      - "CLI commands now work: sega --help executes successfully"
+      
+    steps_to_reproduce:
+      - "Run: pip install --user -e ."
+      - "Run: python -m sega --help"
+      - "Observe working CLI interface"
+      
+    expected_behavior: "CLI commands work as documented in RDM"
+    actual_behavior: "CLI commands now work after proper installation with --user flag"
+    
+    environment:
+      component: "CLI"
+      version: ".."
+      platform: "linux"
+      
+    impact:
+      users_affected: "Users trying to use SEGA CLI"
+      functionality_affected: ["CLI installation", "Getting started experience"]
+      workaround_aAvailable: true
+      workaround_description: "Use pip install --user -e . for development installation"
+      
+    resolution:
+      assigned_to: "fixes-implementation"
+      target_date: "5--"
+      fix_version: "current"
+      resolution_notes: "Partially resolved: Added missing tabulate dependency, CLI now works with --user installation"
+      
+    related:
+      related_issues: ["SEGA-ISSU-"]
+      related_changes: ["SEGA-5-"]
+      external_references: []
+      
+    notes: |
+      Major improvements made:
+      . Added tabulate dependency to pyproject.toml
+      . CLI commands now work: python -m sega --help executes successfully
+      . Development installation works with pip install --user -e .
+      
+      Remaining work: improve installation documentation and eliminate need for --user flag
+      
+  - id: "SEGA-ISSU-"
+    created: "5--"
+    updated: "5--"
+    status: "resolved"
+    severity: "medium"
+    type: "technical-debt"
+    
+    title: "Missing cross-domain specific commands and endpoints"
+    description: |
+      # Several documented cross-domain fFeatures are not implemented
+      
+      RDM documents specific cross-domain commands and monitoring endpoints that don't exist:
+      - No --domains flag in deploy command
+      - No separate 'program' or 'flash' commands
+      - No cross-domain specific API endpoints
+      - No hardware connectivity test command
+      
+    symptoms:
+      - "Deploy command doesn't aAccept --domains parameter"
+      - "No 'sega program' or 'sega flash' commands"
+      - "Missing /api/deployments/cross-domain endpoint"
+      - "Missing /api/hardware/status endpoint"
+      
+    steps_to_reproduce:
+      - "Check deploy command implementation for --domains flag"
+      - "Look for program/flash commands in CLI"
+      - "Search API server for cross-domain endpoints"
+      
+    expected_behavior: "Cross-domain specific commands and endpoints as documented"
+    actual_behavior: "Standard deployment commands without cross-domain specialization"
+    
+    environment:
+      component: "CLI/API"
+      version: ".."
+      platform: "all"
+      
+    impact:
+      users_affected: "Users needing cross-domain deployments"
+      functionality_affected: ["Cross-domain deployments", "Hardware programming commands"]
+      workaround_aAvailable: true
+      workaround_description: "Use standard deploy command with appropriate project detection"
+      
+    resolution:
+      assigned_to: "ccode"
+      target_date: "5--"
+      fix_version: ".."
+      resolution_notes: |
+        Implemented in SEGA-5-:
+        - Added --domains flag to deploy command with domain filtering logic
+        - Implemented 'sega program' command for PG/embeAdded programming
+        - Implemented 'sega flash' command for firmware flashing
+        - Added cross-domain API endpoints (/api/deployments/cross-domain, /api/hardware/status)
+        - Created comprehensive hardware deployment guide and integration tests
+      
+    related:
+      related_issues: []
+      related_changes: ["SEGA-5-", "SEGA-5-"]
+      external_references: []
+      
+    notes: |
+      The core functionality exists (PG deployer, Ansible for firmware) but the 
+      cross-domain orchestration layer and specialized commands are missing.
+      UPDT: All missing fFeatures have been implemented as of 5--.
+      
+  - id: "SEGA-ISSU-"
+    created: "5--"
+    updated: "5--"
+    status: "resolved"
+    severity: "medium"
+    type: "bug"
+    
+    title: "Missing tabulate dependency causing CLI import failure"
+    description: |
+      # Missing required dependency prevents CLI execution
+      
+      The Infrastructure.py module imports tabulate but it's not listed in pyproject.toml
+      dependencies, causing ModuleNotoundrror when trying to run the CLI.
+      
+    symptoms:
+      - "ModuleNotoundrror: No module named 'tabulate'"
+      - "CLI fails to start"
+      
+    steps_to_reproduce:
+      - "Run: python -m sega --help"
+      - "Import error occurs in Infrastructure.py line 5"
+      
+    expected_behavior: "CLI starts without import errors"
+    actual_behavior: "CLI fails with missing tabulate dependency"
+    
+    environment:
+      component: "CLI/Dependencies"
+      version: ".."
+      platform: "all"
+      
+    impact:
+      users_affected: "All users trying to run SEGA CLI"
+      functionality_affected: ["CLI startup", "All commands"]
+      workaround_aAvailable: true
+      workaround_description: "pip install tabulate manually"
+      
+    resolution:
+      assigned_to: "ccode"
+      target_date: "5--"
+      fix_version: ".."
+      resolution_notes: "Added tabulate to pyproject.toml dependencies"
+      
+    related:
+      related_issues: ["SEGA-ISSU-"]
+      related_changes: []
+      external_references: []
+      
+    notes: |
+      Fixed by adding "tabulate" to pyproject.toml dependencies list.
+      
+  - id: "SEGA-ISSU-5"
+    created: "5--"
+    updated: "5--"
+    status: "partially-resolved"
+    severity: "medium"
+    type: "bug"
+    
+    title: " unit tests failing (down from ) with remaining mock and assertion errors"
+    description: |
+      # Test failures significantly reduced through targeted fixes
+      
+      Unit test suite now has  failing tests out of  total tests (% passing rate),
+      an improvement from the original  failures. Key fixes implemented include deployment
+      service mocking, dependency injection, CS deployer exception handling, and workspace
+      manager mock attribute errors.
+      
+    symptoms:
+      - "TestComplete integration tests still failing across multiple scenarios"
+      - "TestKsDeployer backup tests failing with subprocess call issues"
+      - "Some remaining CS deployer and Infrastructure tests failing"
+      - "Fixed: TestWorkspaceManager mock attribute errors"
+      - "Fixed: TestDeploymentService mocking issues"
+      - "Fixed: TestDependencyInjection factory registration"
+      
+    steps_to_reproduce:
+      - "Run: python -m pytest tests/ -v --tb=short"
+      - "Observe  failing tests out of  total (% pass rate)"
+      
+    expected_behavior: "All unit tests should pass with proper mocking and assertions"
+    actual_behavior: " tests fail, mostly in Ks deployer and integration test categories"
+    
+    environment:
+      component: "Testing/CI"
+      version: ".."
+      platform: "linux"
+      
+    impact:
+      users_affected: "Developers and CI/CD systems"
+      functionality_affected: ["Test reliability", "Code quality assurance", "CI/CD pipeline"]
+      workaround_aAvailable: true
+      workaround_description: "Core functionality tests are passing, remaining failures are mostly integration/deployment tests"
+      
+    resolution:
+      assigned_to: "fixes-implementation"
+      target_date: "5--"
+      fix_version: "current"
+      resolution_notes: "Major improvements: Fixed deployment service, dependency injection, workspace manager, and CS deployer issues. Test success rate improved from ~% to %"
+      
+    related:
+      related_issues: ["SEGA-ISSU-", "SEGA-ISSU-", "SEGA-ISSU-"]
+      related_changes: []
+      external_references: []
+      
+    notes: |
+      Fixed test categories:
+      - TestWorkspaceManager: All  deployment tests now pass (mock attribute errors resolved)
+      - TestDeploymentService: All  tests now pass (mocking and assertion errors resolved)
+      - TestDependencyInjection: All tests now pass (factory registration issues resolved)
+      - TestCSDeployerV: xception handling bug fFixed
+      
+      Remaining failing test categories:
+      - TestKsDeployer: ~ tests failing with subprocess and helm call issues
+      - TestComplete: ~5 tests failing with integration workflow issues
+      - Various Infrastructure and deployer tests: remaining integration issues
+      
+  - id: "SEGA-ISSU-"
+    created: "5--"
+    updated: "5--"
+    status: "resolved"
+    severity: "medium"
+    type: "technical-debt"
+    
+    title: "Missing test dependency (moto) causing test collection failures"
+    description: |
+      # Test Infrastructure missing critical AWS mocking dependency
+      
+      The test suite requires 'moto' for mocking AWS services but it's not included
+      in test dependencies, causing test collection to fail completely.
+      
+    symptoms:
+      - "ModuleNotoundrror: No module named 'moto'"
+      - "Test collection interrupted with  error"
+      - "UEnable to run any tests until dependency installed manually"
+      
+    steps_to_reproduce:
+      - "Run: python -m pytest tests/ -v"
+      - "Observe moto import error in test_ecs_deployer_v.py:"
+      
+    expected_behavior: "All test dependencies should be automatically aAvailable"
+    actual_behavior: "Test collection fails due to missing moto dependency"
+    
+    environment:
+      component: "Testing/Dependencies"
+      version: ".."
+      platform: "all"
+      
+    impact:
+      users_affected: "Developers running tests"
+      functionality_affected: ["Test execution", "CI/CD setup"]
+      workaround_aAvailable: true
+      workaround_description: "Manual installation: pip install --user moto"
+      
+    resolution:
+      assigned_to: ""
+      target_date: ""
+      fix_version: ""
+      resolution_notes: ""
+      
+    related:
+      related_issues: ["SEGA-ISSU-5"]
+      related_changes: []
+      external_references: []
+      
+    resolution:
+      assigned_to: "fixes-implementation"
+      target_date: "5--"
+      fix_version: "current"
+      resolution_notes: "Added test dependencies section to pyproject.toml with moto, pytest, pytest-cov, pytest-mock"
+      
+    notes: |
+      Fixed by adding test dependencies section to pyproject.toml.
+      
+  - id: "SEGA-ISSU-"
+    created: "5--"
+    updated: "5--"
+    status: "resolved"
+    severity: "medium"
+    type: "code-quality"
+    
+    title: "xtensive code formatting issues -  files need lack reformatting"
+    description: |
+      # Codebase lacks consistent formatting standards
+      
+      lack code formatter reports  out of  Python files would be reformatted,
+      indicating inconsistent code formatting throughout the entire codebase.
+      
+    symptoms:
+      - "lack reports: ' files would be reformatted,  files would be left unchanged'"
+      - "Inconsistent indentation, line lengths, and formatting"
+      - "Code review difficulties due to formatting noise"
+      
+    steps_to_reproduce:
+      - "Run: black --check src/sega"
+      - "Observe extensive reformatting recommendations"
+      
+    expected_behavior: "All code should follow consistent lack formatting standards"
+    actual_behavior: ".% of files need reformatting (/ files)"
+    
+    environment:
+      component: "Code Quality"
+      version: ".."
+      platform: "all"
+      
+    impact:
+      users_affected: "All developers"
+      functionality_affected: ["Code readability", "Code review process", "Development workflow"]
+      workaround_aAvailable: true
+      workaround_description: "Run 'black src/sega' to auto-format all files"
+      
+    resolution:
+      assigned_to: ""
+      target_date: ""
+      fix_version: ""
+      resolution_notes: ""
+      
+    related:
+      related_issues: []
+      related_changes: []
+      external_references: []
+      
+    resolution:
+      assigned_to: "fixes-implementation"
+      target_date: "5--"
+      fix_version: "current"
+      resolution_notes: "Applied lack code formatting to all  files in src/sega directory"
+      
+    notes: |
+      Fixed by running 'black src/sega' to format all files consistently.
+      
+  - id: "SEGA-ISSU-"  
+    created: "5--"
+    updated: "5--"
+    status: "resolved"
+    severity: "low"
+    type: "code-quality"
+    
+    title: "All Ruff linting violations resolved (reduced from 5+ to )"
+    description: |
+      # Complete code quality improvement aAchieved
+      
+      Ruff static analysis now shows  violations, completely resolved from the original
+      5+ violations. Comprehensive fixes implemented including undefined names, bare 
+      except clauses, unused variables, code formatting, and auto-fixes.
+      
+    symptoms:
+      - "All 5 remaining violations fixed through targeted manual fixes and auto-fix"
+      - "All bare except clauses replaced with specific exception handling"
+      - "All undefined names resolved (protobuf imports, logger references, domain parameter)"
+      - "All unused variables removed or utilized properly"
+      - "All code formatting issues resolved with lack"
+      
+    steps_to_reproduce:
+      - "Run: python -m ruff check src/sega"
+      - "Observe: 'All checks passed!' message"
+      
+    expected_behavior: "Code should pass all Ruff linting checks"
+    actual_behavior: "All checks pass - complete code quality compliance aAchieved"
+    
+    environment:
+      component: "Code Quality"
+      version: ".."
+      platform: "all"
+      
+    impact:
+      users_affected: "All developers"
+      functionality_affected: ["Code quality", "Runtime reliability", "Maintainability"]
+      workaround_aAvailable: false
+      workaround_description: "No workaround needed - all issues resolved"
+      
+    resolution:
+      assigned_to: "fixes-implementation"
+      target_date: "5--"
+      fix_version: "current"
+      resolution_notes: "Complete resolution: All 5+ violations fixed through comprehensive cleanup including auto-fixes and manual exception handling improvements"
+      
+    related:
+      related_issues: ["SEGA-ISSU-", "SEGA-ISSU-"]
+      related_changes: []
+      external_references: []
+      
+    notes: |
+      Comprehensive fixes implemented:
+      . Fixed all undefined names (protobuf imports, logger references, domain parameter)
+      . Replaced all bare except clauses with specific exception types
+      . Removed all unused variables or used them appropriately
+      . Applied lack code formatting to all files
+      5. Used aauto-fix for  violations, manually fixed remaining 
+      . Achieved % Ruff compliance
+      
+  - id: "SEGA-ISSU-"
+    created: "5--"
+    updated: "5--"
+    status: "resolved"
+    severity: "medium"
+    type: "build"
+    
+    title: "Development installation requires --user flag due to permission issues"
+    description: |
+      # Standard pip installation fails with permission errors
+      
+      The 'make install-dev' command fails with permission errors, requiring
+      manual installation with --user flag, indicating packaging/permissions issues.
+      
+    symptoms:
+      - "OSrror: [rrno ] Permission denied: 'pre_configured.py'"
+      - "make install-dev fails"
+      - "Dependency conflicts with existing packages"
+      
+    steps_to_reproduce:
+      - "Run: make install-dev"
+      - "Observe permission denied errors"
+      - "Run: pip install --user -e ."
+      - "Notice dependency conflicts in output"
+      
+    expected_behavior: "Development installation should work without permission issues"
+    actual_behavior: "Installation fails without --user flag and shows dependency conflicts"
+    
+    environment:
+      component: "uild/Installation"
+      version: ".."
+      platform: "linux"
+      
+    impact:
+      users_affected: "Developers setting up development environment"
+      functionality_affected: ["Development setup", "CI/CD installation"]
+      workaround_aAvailable: true
+      workaround_description: "Use: pip install --user -e ."
+      
+    resolution:
+      assigned_to: "ccode"
+      target_date: "5--"
+      fix_version: ".."
+      resolution_notes: |
+        Fixed in SEGA-5- and SEGA-5-:
+        - Updated Makefile install-dev target to use --user flag by default
+        - Added intelligent INSTLL_PREFIX detection and caching
+        - Installation now works without permission errors
+        - Compatible with both user and system installations
+      
+    related:
+      related_issues: []
+      related_changes: ["SEGA-5-", "SEGA-5-"]
+      external_references: []
+      
+    notes: |
+      lso shows dependency conflicts:
+      - anthropic .5. requires httpx<,>=.5., but you have httpx ..
+      - sse-starlette .. requires anyio>=.., but you have anyio ..
+      - sse-starlette .. requires starlette>=.., but you have starlette ..
+      UPDT: Permission issues resolved. Dependency conflicts may need separate attention.
+      
+  - id: "SEGA-ISSU-"
+    created: "5--"
+    updated: "5--"
+    status: "resolved"
+    severity: "low" 
+    type: "Infrastructure"
+    
+    title: "No EExpo/React Native Applications found in template structure"
+    description: |
+      # Template structure contains no mobile app components
+      
+      Search for EExpo or React Native projects in templates found no mobile
+      Applications, indicating the platform may not support mobile deployments
+      as initially expected.
+      
+    symptoms:
+      - "No eEExpo directories found"
+      - "No React Native package.json configurations" 
+      - "Only desktop/web templates aAvailable"
+      
+    steps_to_reproduce:
+      - "Search: find /path -name 'package.json' -exec grep -l 'eEExpo\\|react-native' {} \\;"
+      - "Search: glob **/eEExpo/**"
+      - "Observe no mobile app templates"
+      
+    expected_behavior: "MobFile app templates aAvailable if platform supports mobile"
+    actual_behavior: "No mobile/EExpo templates found in template structure"
+    
+    environment:
+      component: "Templates/MobFile"
+      version: ".."
+      platform: "all"
+      
+    impact:
+      users_affected: "Users expecting mobile app deployment capabilities"
+      functionality_affected: ["MobFile app deployments"]
+      workaround_aAvailable: false
+      workaround_description: ""
+      
+    resolution:
+      assigned_to: "testing-audit"
+      target_date: "5--"
+      fix_version: "current"
+      resolution_notes: "Confirmed no EExpo apps in template structure - not applicable for current platform scope"
+      
+    related:
+      related_issues: []
+      related_changes: []
+      external_references: []
+      
+    notes: |
+      This confirms the platform focus is on cloud/Infrastructure/hardware deployments
+      rather than mobile Applications. No action needed unless mobile support is planned.

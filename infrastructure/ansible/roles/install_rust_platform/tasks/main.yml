@@ -1,0 +1,114 @@
+---
+# Rust Platform Installation Role
+# Installs Rust-based platform services
+# Referenced by: rust-platform system type
+# See also: install_rust_engine for engine-only deployments
+
+- name: Ensure Rust platform directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ ansible_env.HOME }}/fleet_platform"
+    - "{{ ansible_env.HOME }}/fleet_platform/config"
+    - "{{ ansible_env.HOME }}/fleet_platform/data"
+    - "{{ ansible_env.HOME }}/fleet_platform/logs"
+    - "{{ ansible_env.HOME }}/fleet_platform/bin"
+
+# Rust Installation
+- name: Check if Rust is installed
+  shell: rustc --version
+  register: rust_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Install Rust via rustup
+  shell: |
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  when: rust_check.rc != 0
+  args:
+    creates: "{{ ansible_env.HOME }}/.cargo/bin/rustc"
+
+- name: Add Cargo to PATH
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    line: 'export PATH="$HOME/.cargo/bin:$PATH"'
+    state: present
+
+# Build Dependencies
+- name: Install Rust platform build dependencies
+  become: true
+  apt:
+    name:
+      - build-essential
+      - pkg-config
+      - libssl-dev
+      - libpq-dev
+      - protobuf-compiler
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+
+# Docker for platform services
+- name: Ensure Docker is installed for platform services
+  become: true
+  apt:
+    name:
+      - docker.io
+      - docker-compose
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Add user to docker group
+  become: true
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+# Platform Configuration
+- name: Copy platform Docker Compose configuration
+  template:
+    dest: "{{ ansible_env.HOME }}/fleet_platform/docker-compose.yml"
+    src: "docker-compose.yml.j2"
+    mode: '0644'
+  when: platform_docker_compose is defined
+
+- name: Copy platform environment configuration
+  template:
+    dest: "{{ ansible_env.HOME }}/fleet_platform/.env"
+    src: ".env.j2"
+    mode: '0600'
+  when: platform_env_template is defined
+
+# GitLab Registry Login
+- name: Docker registry login
+  become: true
+  shell: "{{ docker_login_command }}"
+  when: docker_login_command is defined and docker_login_command | length > 0
+
+# Pull and start platform services
+- name: Pull platform Docker images
+  become: true
+  shell: docker-compose pull
+  args:
+    chdir: "{{ ansible_env.HOME }}/fleet_platform"
+  when: platform_docker_compose is defined
+
+- name: Start Rust platform services
+  become: true
+  shell: docker-compose up -d
+  args:
+    chdir: "{{ ansible_env.HOME }}/fleet_platform"
+  when: platform_docker_compose is defined
+
+# Systemd service for native Rust binaries
+- name: Create systemd service for Rust platform
+  become: true
+  template:
+    dest: /etc/systemd/system/fleet-rust-platform.service
+    src: fleet-rust-platform.service.j2
+    mode: '0644'
+  when: install_systemd_service | default(false)
+  notify: reload systemd

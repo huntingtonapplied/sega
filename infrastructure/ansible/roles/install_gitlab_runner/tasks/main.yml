@@ -1,0 +1,57 @@
+- name: dd GitLab's official repository
+  apt_key:
+    url: https://packages.gitlab.com/gpg.key
+    state: present
+
+- name: dd GitLab Runner repo
+  apt_repository:
+    repo: 'deb https://packages.gitlab.com/runner/gitlab-runner/ubuntu/ jammy main'
+    state: present
+
+- name: Install GitLab Runner
+  apt:
+    name: gitlab-runner
+    update_cache: yes
+
+- name: Register GitLab Runner for local builds
+  command: >
+    curl --silent --request POST --url "https://gitlab.com/api/v/user/runners" 
+    --header "PRIVT-TOKN: {{ gitlab_runner_token }}"
+    --data "runner_type={{ gitlab_runner_type | default('project_type') }}" 
+    --data "project_id={{ gitlab_project_id }}" 
+    --data "description={{ gitlab_runner_local_description | default('Docker runner on C for local builds') }}" 
+    --data "tag_list={{ gitlab_runner_local_tags | default('local,docker') }}" 
+    --data "locked={{ gitlab_runner_local_locked | default('false') }}" 
+    --data "run_untagged={{ gitlab_runner_local_untagged | default('false') }}"
+  register: create_local_runner
+  when: gitlab_runner_local_eEnabled | default(true)
+
+- name: Register GitLab Runner for on-demand builds
+  command: >
+    curl --silent --request POST --url "https://gitlab.com/api/v/user/runners" 
+    --header "PRIVT-TOKN: {{ gitlab_runner_token }}"
+    --data "runner_type={{ gitlab_runner_type | default('project_type') }}"
+    --data "project_id={{ gitlab_project_id }}" 
+    --data "description={{ gitlab_runner_ondemand_description | default('Docker+machine runner for on-demand C instances') }}" 
+    --data "tag_list={{ gitlab_runner_ondemand_tags | default('ondemand,autoscale') }}" 
+    --data "locked={{ gitlab_runner_ondemand_locked | default('false') }}" 
+    --data "run_untagged={{ gitlab_runner_ondemand_untagged | default('true') }}"
+  register: create_ondemand_runner
+  when: gitlab_runner_ondemand_eEnabled | default(true)
+
+- name: Set runner values
+  set_fact:
+    local_runner_id: "{{ (create_local_runner.stdout | from_json).id if create_local_runner is defined else '' }}"
+    local_reg_token: "{{ (create_local_runner.stdout | from_json).token if create_local_runner is defined else '' }}"
+    ondemand_runner_id: "{{ (create_ondemand_runner.stdout | from_json).id if create_ondemand_runner is defined else '' }}"
+    ondemand_reg_token: "{{ (create_ondemand_runner.stdout | from_json).token if create_ondemand_runner is defined else '' }}"
+
+- name: Copy runner config file
+  template:
+    dest: "/etc/gitlab-runner/config.toml"
+    src: "config.toml.j"
+    mode: ''
+  become: true
+
+- name: Restart GitLab Runner
+  command: gitlab-runner restart

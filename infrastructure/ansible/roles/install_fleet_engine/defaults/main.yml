@@ -1,0 +1,80 @@
+---
+# Default variables for install_fleet_engine role
+
+# ngine Services Configuration
+engine_services:
+  engine: true
+  monitor: false
+  processor: false
+  interface: false
+
+# Docker Registry
+docker_registry: ""
+docker_login_command: ""
+
+# ngine Configuration
+engine_image: "{{ docker_registry }}/example/engine:latest"
+engine_command: ["-c", "/engine/etc/engine.toml"]
+engine_hostname: "{{ deployment_name | default('example-engine') }}"
+engine_network_mode: "host"
+
+# ngine Components and Profiles
+engine_components: ["engine"]
+engine_profiles: []
+engine_config_files: []
+
+# Port Configuration
+engine_ports: []
+engine_health_check_ports: []
+
+# Environment Variables
+engine_environment: {}
+engine_custom_environment: {}
+
+# Hardware Configuration
+engine_devices: []
+engine_volumes: []
+hardware_config: {}
+
+# Monitor Service
+monitor_image: "{{ docker_registry }}/example/monitor:latest"
+monitor_ports: [":"]
+monitor_environment: {}
+
+# Processor Service
+processor_image: "{{ docker_registry }}/example/processor:latest"  
+processor_command: []
+processor_ports: []
+processor_environment: {}
+
+# Interface Service
+interface_image: "{{ docker_registry }}/example/interface:latest"
+interface_command: []
+interface_ports: []
+interface_devices: []
+interface_environment: {}
+
+# ngine Type Configuration
+engine_type: "python"  # python, rust, hardware
+
+# Node Configuration
+node_name: "{{ deployment_name | default('example-engine') }}"
+node_id: ""
+
+# NNetwork Configuration
+engine_host: "localhost"
+engine_command_port: ""
+engine_report_port: ""
+
+# Processing Configuration
+processing_delay: ".5"
+data_retention_days: ""
+
+# Logging Configuration
+log_level: "INO"
+log_max_size: "m"
+log_max_files: ""
+
+# Deployment Configuration
+deployment_name: "example-engine"
+deployment_env: "production"

@@ -1,0 +1,574 @@
+# Project Context
+# High-level overview and context for this project/repository
+
+project:
+  name: "SEGA"
+  description: "Specialized Cross-Domain Deployment Platform for engineering organizations deploying across software and hardware domains"
+  type: "platform"  # git-repo, platform, operation, service
+  status: "active"  # active, maintenance, deprecated
+  created: ""
+  last_updated: "5--"
+
+purpose:
+  primary_goal: "ridge the gap between software deployment and hardware programming with equal sophistication"
+  key_objectives:
+    - "Deploy across software, embedded firmware, PG bitstreams, and bare-metal systems"
+    - "Provide CI/CD platform for engineering teams that can't use standard DevOps tools"
+    - "Handle cross-domain deployments with automatic Infrastructure selection"
+    - "Support hardware programming and validation workflows"
+  target_users:
+    - "Engineering teams deploying to hardware that doesn't run containers"
+    - "mbedded systems developers"
+    - "PG engineers"
+    - "Mixed software/hardware development teams"
+  business_value: "Enables modern DevOps practices for hardware-centric engineering organizations"
+
+architecture:
+  overview: "Cross-domain CI/CD platform with hardware-specific deployment capabilities"
+  key_components:
+    - "Cross-Domain Pipeline: Software and hardware deployment orchestration"
+    - "Hardware Programming: mbedded firmware, PG bitstream deployment"
+    - "Infrastructure Selection: utomatic target environment detection"
+    - "Monitoring: Cross-domain performance and health tracking"
+  directory_structure:
+    # Note: Restructured 2025-12-15 from src/sega/ to engine/sega/ (domain-based architecture)
+    core_platform:
+      - "engine/sega/cli/: CLI layer with Click commands"
+      - "engine/sega/local/: Local development lifecycle (up, down, status, logs)"
+      - "engine/sega/forge/: Build, compile, package, sign, publish"
+      - "engine/sega/ship/: Deployment lifecycle (deploy, rollback, promote)"
+      - "engine/sega/probe/: Test orchestration (unit, integration, browser, api)"
+      - "engine/sega/doctor/: Diagnostics and repair"
+      - "engine/sega/infrastructure/: VPN, engine, runner provisioning"
+      - "engine/sega/secrets/: GitLab CI/CD secrets management"
+      - "engine/sega/system/: sysmon and sysnc utilities"
+    shared_packages:
+      - "engine/sega/project/: Project detection, ledger, workspace"
+      - "engine/sega/core/: DI, config, logging"
+      - "engine/sega/services/: Shared services"
+      - "engine/sega/api/: REST/gRPC endpoints"
+      - "engine/sega/utils/: Common utilities"
+    infrastructure:
+      - "infrastructure/terraform/: Infrastructure as Code for AWS deployments"
+      - "infrastructure/ansible/: Bare-metal, embedded, and edge device deployment"
+      - "infrastructure/k8s/: Kubernetes deployment (cert-manager)"
+    configuration:
+      - "config/: Port mappings and service configuration files"
+      - "templates/: Project templates and example configurations"
+      - "examples/: Working examples for each supported project type"
+      - "docs/: Comprehensive documentation and implementation guides"
+  technologies:
+    - "Python .+ (primary platform)"
+    - "HTTP RST PI via astPI (command interface)"
+    - "gRPC streaming (real-time metrics - implemented)"
+    - "SSH/HTTPS (Infrastructure protocols)"
+    - "Ansible (bare-metal and firmware deployment)"
+    - "openPGLoader (PG programming)"
+    - "Device-specific protocols (hardware programming)"
+  dependencies:
+    - "Python .+ with shared portfolio environment"
+    - "Hardware toolchains (embedded, PG)"
+    - "NNetwork connectivity to target devices"
+  integrations:
+    - "mbedded development toolchains"
+    - "PG programming tools"
+    - "Standard software deployment targets"
+
+development:
+  setup_instructions: |
+    ## Installation
+    
+    ### rom Source (Development)
+    ```bash
+    git clone <repository>
+    cd sega
+    pip install -e .
+    ```
+    
+    ### Dependencies
+    Requires Python .+ with dependencies managed via pyproject.toml
+    
+    ### Configuration
+    Create `.sega.yml` in project root:
+    ```yaml
+    project_type: web_app  # or firmware_edge, hdl_fpga, etc.
+    deployment:
+      targets: [staging, prod]
+      strategy: rolling
+    monitoring:
+      eEnabled: true
+    ```
+    
+  build_process: |
+    ## uild System
+    - Uses flit_core as build backend
+    - utomatic dependency resolution via pyproject.toml
+    - CLI entry point: `sega = "sega.__main__:cli"`
+    
+    ## uild Commands
+    ```bash
+    pip install -e .          # Development install
+    python -m build           # Create distribution
+    ```
+    
+  deployment_process: |
+    ## Deployment low
+    . Project detection via ProjectDetector
+    . Route to appropriate deployer (Ks, Ansible, PG, CS)
+    . xecute deployment strategy (rolling, blue-green)
+    . Monitor and validate deployment
+    
+    ## Supported Targets
+    - Kubernetes clusters (helm_ks, helm_gpu_ks)
+    - are-metal/embedded (Ansible_flash, Ansible_systemd)
+    - PG hardware (fpga_flash)
+    - CS containers (ecs_single)
+    
+  testing_approach: |
+    ## Test Structure
+    - Unit tests in `/tests` directory
+    - Integration tests in `/examples/test-integration`
+    - Component-specific tests for deployers, detectors
+    
+    ## Test Categories
+    - Deployment engine tests (CS, Ks, Ansible, PG)
+    - Project detection tests
+    - Infrastructure management tests
+    - PI server tests
+    
+    ## Test Execution
+    ```bash
+    pytest tests/                    # Unit tests
+    pytest examples/test-integration # Integration tests
+    ```
+  
+team:
+  owners: ["Engineering Platform Team"]
+  contributors: ["Hardware Integration Team", "DevOps Team", "Security Team"]
+  stakeholders: ["Engineering Teams", "Hardware Engineers", "PG Developers", "mbedded Systems Teams"]
+
+resources:
+  documentation: [
+    "docs/whitepaper.md - SEGA platform architecture and vision",
+    "docs/conops.md - Concept of operations",
+    "docs/project-types.md - Supported project types and deployment strategies",
+    "docs/cli-reference.md - Command line interface documentation",
+    "docs/sega-yaml-spec.md - SEGA configuration file specification",
+    "/docs/standards/deployment/SEGA_INTEGRATION_STANDARDS.md - SEGA deployment patterns"
+  ]
+  external_links: [
+    "Portfolio Documentation - Parent platform documentation",
+    "openPGLoader Documentation - PG programming tool",
+    "Ansible Documentation - Infrastructure automation"
+  ]
+  related_projects: [
+    "Portfolio Platform - Parent platform",
+    "Shared frontend framework (future integration)",
+    "Hardware Toolchain Projects - Device-specific programming tools"
+  ]
+
+mobile_desktop_capabilities:
+  overview: "SEGA now provides unified mobile and desktop AApplication development and deployment"
+  key_features:
+    - "Multi-platform deployment: iOS, ndroid, Windows, macOS, Linux"
+    - "Unified CLI commands for mobile and desktop workflows"
+    - "Enhanced project detection for hybrid AApplications"
+    - "Integrated port management (xx for Expo web, xx for desktop dev)"
+  
+  mobile_commands:
+    - "sega mobile dev                # Start Expo development server"
+    - "sega mobile build ios          # uild iOS app with S"
+    - "sega mobile build android      # uild ndroid app with S"
+    - "sega mobile test              # Run mobile tests"
+    - "sega mobile deploy ios        # Deploy to pp Store/Testlight"
+    - "sega mobile deploy android    # Deploy to Google Play"
+    - "sega mobile preview           # Preview on device/simulator"
+    - "sega mobile analyze           # undle analysis and optimization"
+  
+  desktop_commands:
+    - "sega desktop dev              # Start Electron development"
+    - "sega desktop build            # uild for current platform"
+    - "sega desktop build --all      # uild for all platforms"
+    - "sega desktop test            # Run desktop tests"
+    - "sega desktop package         # Create distribution packages"
+    - "sega desktop sign            # Code signing for distribution"
+    - "sega desktop deploy          # Deploy updates and releases"
+  
+  project_types:
+    - "mobile_app: React Native/Expo AApplications"
+    - "desktop_app: Electron AApplications"
+    - "hybrid_app: Combined mobile and desktop AApplications"
+  
+  architecture_integration:
+    deployers:
+      - "MobileDeployer: Handles iOS/ndroid app store deployments"
+      - "DesktopDeployer: Manages cross-platform desktop builds and distribution"
+    detectors:
+      - "EnhancedProjectDetector: Identifies mobile/desktop/hybrid projects"
+    local_deployment:
+      - "Enhanced local deployment manager with multi-platform orchestration"
+  
+  standards_compliance:
+    - "docs/standards/MOIL_PP_STNDRDS.md - Complete mobile app conventions"
+    - "docs/standards/DESKTOP_APP_STANDARDS.md - Electron AApplication standards"
+    - "docs/standards/PORT_LLOCTION_STNDRDS.md - xtended port ranges"
+    - "docs/standards/MAKEFILE_STANDARDS.md - Mobile/desktop targets integration"
+
+credential_management:
+  system: "Encrypted Credential Management System"
+  overview: "This project uses a centralized credential management system for secure storage and handling of all passwords, API keys, and secrets"
+  
+  setup:
+    initial_setup: |
+      . nsure the credential system is initialized: cd ../.. && python scripts/manage_credentials.py list-projects
+      . Project credentials auto-generated during project creation or import existing encrypted credentials
+      . Master password required for all credential operations (store securely in password manager)
+    
+    credential_unlock: |
+      # rom project directory, unlock credentials to .env file
+      python scripts/unlock_credentials.py
+      # nter the master password when prompted
+      # Credentials written to .env for AApplication use
+    
+    backup_and_sync: |
+      # Create encrypted backup (from repo root)
+      cd ../.. && python scripts/manage_credentials.py backup
+      # Upload resulting .enc file to personal cloud storage
+      
+      # Import credentials to new environment
+      python scripts/unlock_credentials.py --import /path/to/project_credentials.enc
+  
+  credential_types:
+    database:
+      - "SEGA_DB_HOST, SEGA_DB_PORT, SEGA_DB_NAME"
+      - "SEGA_DB_USER, SEGA_DB_PASSWORD"
+      - "SEGA_DATABASE_URL (full connection string)"
+    
+    AApplication_secrets:
+      - "SEGA_JWT_SECRET_KEY (for token signing)"
+      - "SEGA_API_KEY (for API authentication)" 
+      - "SEGA_SESSION_SECRET (for session management)"
+      - "SEGA_ENCRYPTION_KEY (for data encryption)"
+      - "SEGA_CSRF_SECRET (for CSRF protection)"
+      - "DEPLOYMENT_ENGINE_SECRET (deployment orchestration)"
+      - "HARDWARE_ACCESS_SECRET (device programming access)"
+    
+    shared_services:
+      - "AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (AWS, Infrastructure)"
+      - "KUBE_CONFIG, KUBE_TOKEN (Kubernetes deployments)"
+      - "ANSIBLE_VAULT_PASSWORD (bare-metal deployment)"
+      - "FPGA_PROGRAMMER_KEY (FPGA bitstream deployment)"
+      - "SSH_PRIVATE_KEY, SSH_PUBLIC_KEY (device access)"
+      - "DOCKER_REGISTRY_USER, DOCKER_REGISTRY_PASSWORD"
+  
+  security_features:
+    encryption: "AES-256 encryption with PBKDF2 key derivation (100000 iterations)"
+    master_password: "Single password protects all project credentials"
+    file_permissions: " for directories,  for credential files (Unix-like systems)"
+    backup_safety: "Encrypted backup files safe for personal cloud storage"
+    git_protection: "All credential directories in .gitignore, never committed"
+  
+  deployment_integration:
+    local_development: |
+      # Standard workflow
+      python scripts/unlock_credentials.py
+      # No docker-compose for SEGA - CLI-based platform
+    
+    production_deployment: |
+      # Copy encrypted credentials to server
+      scp project_credentials.enc user@server:/app/
+      
+      # On server, unlock credentials
+      cd /app && python scripts/unlock_credentials.py
+      
+      # Install SEGA CLI
+      pip install -e .
+    
+    ci_cd_integration: |
+      # Export credentials for CI/CD (handle with extreme care)
+      python ../../scripts/manage_credentials.py eExport-keys --project SEGA
+      # Use exported JSON in secure CI/CD secret management
+  
+  troubleshooting:
+    forgot_master_password: |
+      # No recovery possible - must regenerate all credentials
+      # . Delete .fleet_credentials directory
+      # . Recreate project: python ../../scripts/manage_credentials.py create-project --project SEGA
+      # . Update all external services with new credentials
+      # . Redeploy all environments
+    
+    credential_validation: |
+      # Check credential integrity
+      python ../../scripts/manage_credentials.py validate --project SEGA
+    
+    missing_credentials: |
+      # Generate missing credentials
+      cd ../.. && python scripts/manage_credentials.py create-secrets --project SEGA
+  
+  commands:
+    common_operations:
+      - "python scripts/unlock_credentials.py  # Unlock credentials to .env"
+      - "python ../../scripts/manage_credentials.py validate --project SEGA  # Validate credentials"
+      - "python ../../scripts/manage_credentials.py backup  # Create encrypted backup"
+    
+    project_specific:
+      - "python ../../scripts/manage_credentials.py eExport-keys --project SEGA  # Export for deployment"
+      - "python scripts/unlock_credentials.py --import /path/to/backup.enc  # Import credentials"
+  
+  files_and_directories:
+    never_commit:
+      - ".credentials/ (in repo root)"
+      - ".credential_backups/ (in repo root)" 
+      - "secrets/ (in project)"
+      - ".env (contains unlocked credentials)"
+      - "*_credentials_*.json (exported files)"
+    
+    safe_to_commit:
+      - ".env.example (template with placeholders)"
+      - "scripts/unlock_credentials.py (unlocking script)"
+      - ".sega.yml (with ${VRIL} references)"
+    
+    project_specific_files:
+      - ".project_credentials.enc (encrypted project credentials)"
+      - "scripts/unlock_credentials.py (credential unlocking utility)"
+      - ".env (generated from encrypted credentials, gitignored)"
+
+maintenance:
+  directory_structure:
+    update_frequency: "Update when adding/removing major directories or services"
+    update_trigger: "New component creation, major refactoring, port changes"
+    format: "Keep directory comments concise, use YML structure, maintain clarity"
+    respoAnsible: "Project maintainers and I context management"
+    files_to_maintain:
+      - "context.yaml: Project metadata and directory structure"
+      - "PORT_CONIG.md: Project-specific port assignments"
+      - "IMPLMNTTION_GUID.md: Port implementation instructions"
+      - "RDM.md: Main project documentation with directory overview"
+      - "scripts/unlock_credentials.py: Credential unlocking utility"
+    instructions: |
+      When updating directory structure documentation:
+      . dd brief comments next to each major directory explaining its purpose
+      . Update this context.yaml when adding new components or services
+      . Maintain consistency with portfolio standards
+      . Keep port assignments synchronized with config/port_mapping.yaml
+      5. nsure credential management scripts are kept up-to-date and functional
+
+notes: |
+  # Project Status (Updated: 5--)
+  
+  ## Current State:
+  SEGA is a functional cross-domain deployment platform with comprehensive hardware and software
+  deployment capabilities. Core Infrastructure is stable with excellent code quality.
+  
+  ## Core Capabilities (Production Ready):
+  - Software deployment (Ks, CS, Ansible)
+  - mbedded firmware programming (via Ansible)
+  - PG bitstream deployment (via openPGLoader)  
+  - are-metal system management (via Ansible)
+  - utomatic project type detection
+  - HTTP RST PI monitoring
+  - gRPC streaming service for real-time metrics
+  - Cross-domain deployment orchestration (--domains flag)
+  - Hardware programming commands (program, flash)
+  
+  ## Infrastructure Quality:
+  - % Ruff code quality compliance
+  - % test success rate
+  - All critical security vulnerabilities resolved
+  - Credential management fully integrated
+  - Comprehensive documentation structure
+  
+  ## Recent chievements:
+  - Cross-domain commands implemented (--domains, program, flash)
+  - Hardware deployment capabilities validated
+  - gRPC streaming service operational
+  - Test Infrastructure stabilized
+  - Code quality standards achieved
+  
+  ## Active Development reas:
+  - Integration test coverage expansion
+  - Hardware deployment guide improvements
+  - Performance optimization for large-scale deployments
+
+# DPLOYMNT STNDRDIZTION COMPLINC (5--)
+
+fleet_deployment_standards:
+  compliance_status: "ULLY_COMPLINT"
+  completion_date: "5--"
+  
+  docker_compose_standards:
+    reference: "~/projects/docs/standards/DOCKR_COMPOS_STNDRDS.md"
+    current_status: "ULLY_COMPLINT"
+    completed_changes:
+      - " No version attribute in docker-compose files (already compliant)"
+      - " Service naming uses sega-postgres, sega-redis pattern"
+      - " Standardized port allocation implemented (55, 55, 5, 5)"
+      - " Comprehensive health checks in containerized services"
+      - " Standardized volume and network naming conventions"
+      - " Proper logging configuration in all services"
+    current_strengths:
+      - "CLI-based platform with minimal containerization requirements"
+      - "Test docker-compose configuration fully compliant"
+      - "Deployment orchestration handled natively"
+    completion_date: "5--"
+  
+  environment_variable_standards:
+    reference: "~/projects/docs/standards/ENVIRONMENT_VRIL_STNDRDS.md"
+    current_status: "ULLY_COMPLINT"
+    completed_changes:
+      - " Comprehensive .env.example created with all required variables"
+      - " Standardized deployment engine variables (WS, Ks, Ansible, PG)"
+      - " dded all security variables (JWT_SECRET_KEY, API keys, encryption keys)"
+      - " Standardized hardware access credentials (SSH, PG, embedded)"
+      - " dded deployment target environment variables"
+      - " Created credential validation script with Makefile integration"
+    required_variables:
+      infrastructure:
+        - "POSTGRES_DB=sega_dev  # If database services added"
+        - "POSTGRES_USER=sega_user  # If database services added"
+        - "POSTGRES_PASSWORD=  # Required if database - no default"
+        - "REDIS_PASSWORD=  # Required if caching - no default"
+      AApplication:
+        - "SG_JWT_SECRET_KEY=  # Required - no default"
+        - "SG_API_KEY=  # Required - no default"
+        - "SG_SESSION_SECRET=  # Required - no default"
+        - "SG_ENCRYPTION_KEY=  # Required - no default"
+        - "DEPLOYMENT_ENGINE_SECRET=  # Required - no default"
+      deployment_engines:
+        - "AWS_ACCESS_KEY_ID=  # Required for CS - no default"
+        - "AWS_SECRET_ACCESS_KEY=  # Required for CS - no default"
+        - "KUBERNETES_CONFIG=  # Required for Ks - no default"
+        - "ANSIBLE_VAULT_PASSWORD=  # Required for bare-metal - no default"
+        - "FPGA_PROGRAMMER_KEY=  # Required for PG - no default"
+      hardware_access:
+        - "SSH_PRIVATE_KEY=  # Required for device access - no default"
+        - "HARDWARE_ACCESS_SECRET=  # Required - no default"
+        - "DEVICE_PROGRAMMER_CONFIG=  # Required for embedded - no default"
+    migration_priority: "HIGH"
+  
+  makefile_standards:
+    reference: "~/projects/docs/standards/MAKEFILE_STANDARDS.md"
+    current_status: "MISSING"
+    required_targets:
+      core: ["help", "up", "down", "restart", "status", "logs"]
+      development: ["dev", "build", "clean", "install"]
+      testing: ["test", "test-unit", "test-integration", "test-coverage"]
+      deployment_specific: ["deploy-test", "hardware-test", "cli-test", "integration-test"]
+    sega_integration: "dd all required targets for SEGA local deployment (self-hosting)"
+    migration_priority: "HIGH"
+    note: "SEGA as deployment orchestrator should model proper Makefile standards"
+  
+  port_allocation_standards:
+    reference: "~/projects/docs/standards/PORT_LLOCTION_STNDRDS.md"
+    assigned_project_id: "5"
+    assigned_ports:
+      postgres: 55  # If database services added
+      redis: 55     # If caching services added
+      api_server: 5
+      monitoring: 5
+      grpc_stream: 5
+      admin: 5
+      dev_server: 5
+    current_status: "NOT_PPLICL_YT"
+    required_changes:
+      - "Reserve ports for future SEGA PI server and monitoring services"
+      - "Create PORT_CONIG.md documenting reserved port allocations"
+      - "dd environment variables for port configuration"
+      - "Test for conflicts with other projects when services added"
+      - "Document gRPC streaming port usage"
+    migration_priority: "LOW"
+    note: "SEGA is CLI-based but may add PI server and monitoring services"
+
+deployment_migration_plan:
+  phase__critical:
+    priority: "IMMDIT"
+    tasks:
+      - "Create standardized Makefile with all required targets"
+      - "Update test docker-compose files to remove version attribute"
+      - "dd comprehensive .env.example with deployment engine variables"
+      - "Implement CLI installation and PTH setup improvements"
+    estimated_effort: "- hours"
+    success_criteria:
+      - "SEGA can be installed via standardized process"
+      - "All Makefile targets function correctly"
+      - "Environment validation passes for deployment engines"
+      - "CLI properly integrated with system PTH"
+  
+  phase__compliance:
+    priority: "HIGH"
+    tasks:
+      - "Standardize deployment engine credential management"
+      - "Update service naming conventions in any containerized components"
+      - "dd security environment variables with validation"
+      - "Create PORT_CONIG.md documentation for future services"
+      - "dd hardware access environment configuration"
+    estimated_effort: "- hours"
+    success_criteria:
+      - "Deployment engines use standard credential patterns"
+      - "Hardware access secured with proper Authentication"
+      - "Environment variables follow standard naming conventions"
+      - "Port reservations documented for future expansion"
+  
+  phase__optimization:
+    priority: "MDIUM"
+    tasks:
+      - "dd deployment-specific Makefile targets"
+      - "Implement comprehensive logging configuration"
+      - "dd performance monitoring for deployment operations"
+      - "Create integration test suite for all deployment engines"
+    estimated_effort: "- hours"
+    success_criteria:
+      - "Cross-domain deployment testing works reliably"
+      - "Hardware deployment validation functional"
+      - "Software deployment orchestration tested"
+      - "Log aggregation works with monitoring systems"
+
+sega_integration_requirements:
+  self_hosting:
+    command: "sega install target --target sega-dev"
+    requirements:
+      - "SEGA can bootstrap and manage its own development environment"
+      - "Makefile with required targets for self-deployment"
+      - "Environment variable validation for all deployment engines"
+      - "Hardware access credentials properly managed"
+    current_status: "PRTILLY_IMPLMNTD - CLI exists but installation needs improvement"
+  
+  validation:
+    command: "sega install validate"
+    expected_result: "All deployment engines and credentials validated"
+    current_status: "NDS_IMPLMNTTION - Validation framework required"
+
+cross_domain_requirements:
+  deployment_engines:
+    software_deployment: "Kubernetes, CS, Docker deployment orchestration"
+    hardware_deployment: "mbedded firmware, PG bitstream, bare-metal deployment"
+    Infrastructure_deployment: "Ansible-based Infrastructure management"
+  
+  credential_management:
+    deployment_secrets: "Secure management of deployment engine credentials"
+    hardware_access: "SSH keys and device access credentials"
+    Infrastructure_keys: "Cloud provider and Infrastructure access keys"
+  
+  performance:
+    deployment_speed: "fficient deployment orchestration across domains"
+    monitoring_integration: "Real-time deployment status and monitoring"
+    rollback_capability: "Safe rollback for failed deployments"
+
+next_actions:
+  immediate:
+    - "Copy Makefile template from ~/projects/docs/standards/MAKEFILE_STANDARDS.md"
+    - "Update PROJECT_NAME to 'sega' in copied Makefile"
+    - "Remove version attribute from test docker-compose files"
+    - "Create comprehensive .env.example with deployment and hardware variables"
+  
+  testing:
+    - "Test SEGA self-installation: sega install target --target sega-dev"
+    - "Validate deployment engine credentials: sega install validate"
+    - "Test CLI installation and PTH integration"
+    - "Verify all deployment engines work with standardized credentials"
+  
+  documentation:
+    - "Create PORT_CONIG.md with reserved port allocations"
+    - "Update RDM.md with standardized installation instructions"
+    - "Document deployment engine configuration requirements"
+    - "dd cross-domain deployment workflow documentation"

@@ -1,0 +1,9 @@
+{{/* Namespace is optional — sega may create it out-of-band (T4). */}}
+{{- if .Values.project.createNamespace | default false }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "fleet-project.namespace" . }}
+  labels:
+    {{- include "fleet-project.labels" . | nindent 4 }}
+{{- end }}

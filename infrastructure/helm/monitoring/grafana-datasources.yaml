@@ -1,0 +1,37 @@
+# Copyright 2022-2026 Example
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# ===============================================================
+# SEGA CONFIG - Grafana Datasources Configuration
+# ===============================================================
+# File: docs/monitoring/grafana-datasources.yaml
+# Purpose: Grafana datasource configuration for SEGA platform monitoring
+#
+# Description: Defines Grafana datasource connections to Prometheus and Loki
+# for metrics visualization and log aggregation. Configures proxy access
+# to monitoring backend services.
+#
+# Used by: Grafana monitoring dashboard, monitoring stack deployment
+# Format: YAML
+
+apiVersion: 1
+datasources:
+- name: Prometheus
+  type: prometheus
+  access: proxy
+  url: http://prometheus:9090
+- name: Loki
+  type: loki
+  access: proxy
+  url: http://loki:3100

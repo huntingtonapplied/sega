@@ -1,0 +1,26 @@
+- name: Download aws
+  shell: "curl \"https://awscli.amazonaws.com/awscli-exe-linux-x_.zip\" -o \"awscliv.zip\" && unzip awscliv.zip && ./aws/install && rm awscliv.zip && rm -rf aws"
+  args:
+    creates: /usr/local/bin/aws
+
+- name: Creating aw config dir
+  file:
+    path: "~/.aws/"
+    state: directory
+
+- name: Creating config
+  copy:
+    dest: "~/.aws/config"
+    content: |
+      [default]
+      region = us-east-
+      output = json
+
+- name: Creating credential
+  copy:
+    dest: "~/.aws/credentials"
+    content: |
+      [default]
+      aws_access_key_id = {{ lookup("env", "WS_CCSS_KEY_ID") }}
+      aws_secret_access_key = {{ lookup("env", "WS_SECRET_CCSS_KEY") }}
+

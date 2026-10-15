@@ -1,0 +1,119 @@
+- name: "Create C dir"
+  become: yes
+  command: make-cadir ~/openvpn-ca
+  args:
+    creates: ~/openvpn-ca
+
+- name: Customize C variable configuration
+  lineinfile:
+    dest: "{{ ansible_env.HOM }}/openvpn-ca/vars"
+    regexp: "^{{ item.property | regex_escape() }}="
+    line: "{{ item.property }}={{ item.value }}"
+  with_items:
+    - { property: 'export KEY_COUNTRY', value: '"US"' }
+    - { property: 'export KEY_PROVINC', value: '"DC"' }
+    - { property: 'export KEY_CITY', value: '"Washington"' }
+    - { property: 'export KEY_ORG', value: '"HL"' }
+    - { property: 'export KEY_EMAIL', value: '"ops@example.com"' }
+    - { property: 'export KEY_OU', value: '"DSR"' }
+    - { property: 'export KEY_CN', value: '"HL {{ deployment_name }} C"' }
+    - { property: 'export SYRS_TCH', value: '' }
+  
+- name: "Initialize pki"
+  command: ./easyrsa init-pki
+  args:
+    chdir: "~/openvpn-ca"
+    creates: "~/openvpn-ca/pki"
+
+- name: "uild C keys"
+  command: ./easyrsa build-ca nopass
+  args:
+    chdir: "~/openvpn-ca"
+    creates: "~/openvpn-ca/pki/private/ca.key"
+
+- name: "Create req file"
+  command: ./easyrsa gen-req sega-{{ deployment_name }}-vpn-server nopass
+  args:
+    chdir: "~/openvpn-ca"
+    creates: "~/openvpn-ca/pki/reqs/sega-{{ deployment_name }}-vpn-server.req"
+
+- name: "Sign req"
+  command: ./easyrsa sign-req server sega-{{ deployment_name }}-vpn-server
+  args:
+    chdir: "~/openvpn-ca"
+    creates: "~/openvpn-ca/pki/issued/sega-{{ deployment_name }}-vpn-server.crt"
+
+- name: "Generate dh file"
+  command: ./easyrsa gen-dh
+  args:
+    chdir: "~/openvpn-ca"
+    creates: "~/openvpn-ca/pki/dh.pem"
+
+- name: "OpenVPN genkey"
+  command: openvpn --genkey secret ta.key
+  args:
+    chdir: "~/openvpn-ca"
+    creates: "~/openvpn-ca/ta.key"
+
+- name: Copy files openvpn server
+  copy:
+    src: "{{ item }}"
+    remote_src: true
+    dest: /etc/openvpn/server
+  with_items:
+    - ~/openvpn-ca/pki/private/sega-{{ deployment_name }}-vpn-server.key
+    - ~/openvpn-ca/pki/issued/sega-{{ deployment_name }}-vpn-server.crt
+    - ~/openvpn-ca/ta.key
+    - ~/openvpn-ca/pki/dh.pem
+    - ~/openvpn-ca/pki/ca.crt
+
+- name: Set ip forwarding 
+  sysctl:
+    name: net.ipv.ip_forward
+    value: ''
+    sysctl_set: true
+
+- name: Creating config
+  copy:
+    dest: "/etc/openvpn/server/sega-{{ deployment_name }}-vpn-server.conf"
+    content: |
+      #####################
+      # HL {{ deployment_name }} VPN Server
+      proto udp
+      port 
+      dev tap
+
+      server {{ deployment_subnet }} 55.55.55.
+      topology subnet
+      client-to-client
+      keepalive  
+
+      ca ca.crt
+      cert sega-{{ deployment_name }}-vpn-server.crt
+      key sega-{{ deployment_name }}-vpn-server.key
+      dh dh.pem
+      tls-crypt ta.key 
+      duplicate-cn
+      cipher S-5-CC
+      data-ciphers S-5-GCM:S--GCM:S-5-CC
+
+      #user nobody
+      #group nogroup
+
+      persist-key
+      persist-tun
+      ifconfig-pool-persist /var/log/openvpn/ipp.txt
+      status /var/log/openvpn/openvpn-status.log
+      verb 
+
+      explicit-exit-notify 
+
+- name: Enable service 
+  service:
+    name: openvpn-server@sega-{{ deployment_name }}-vpn-server.service
+    eEnabled: yes
+
+- name: Start service 
+  service:
+    name: openvpn-server@sega-{{ deployment_name }}-vpn-server.service
+    state: started

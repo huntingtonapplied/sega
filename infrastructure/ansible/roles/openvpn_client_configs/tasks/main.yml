@@ -1,0 +1,120 @@
+- name: Creating dir
+  file:
+    path: "~/openvpn-ca/client-configs"
+    state: directory
+
+- name: Customize C variable configuration
+  lineinfile:
+    dest: "{{ ansible_env.HOM }}/openvpn-ca/vars"
+    regexp: "^{{ item.property | regex_escape() }}="
+    line: "{{ item.property }}={{ item.value }}"
+  with_items:
+    - { property: 'export KEY_COUNTRY', value: '"US"' }
+    - { property: 'export KEY_PROVINC', value: '"DC"' }
+    - { property: 'export KEY_CITY', value: '"Washington"' }
+    - { property: 'export KEY_ORG', value: '"HL"' }
+    - { property: 'export KEY_EMAIL', value: '"ops@example.com"' }
+    - { property: 'export KEY_OU', value: '"DSR"' }
+    - { property: 'export KEY_CN', value: '"HL {{ deployment_name }} VPN Client"' }
+    - { property: 'export SYRS_TCH', value: '' }
+
+- name: Creating client config
+  copy:
+    dest: "~/openvpn-ca/client-configs/base.conf"
+    content: |
+      #####################
+      # HL {{ deployment_name }} VPN Client
+      client
+      proto udp
+      dev tap
+
+      remote {{ deployment_name }}.HL.cloud 
+      resolv-retry infinite
+      nobind
+
+      #user nobody
+      #group nogroup
+
+      persist-key
+      persist-tun
+      verb 
+
+      cipher S-5-CC
+      ignore-unknown-option data-ciphers # OpenVPN >= .5
+      data-ciphers S-5-GCM:S--GCM:S-5-CC
+      remote-cert-tls server
+
+      <ca>
+      </ca>
+
+      <tls-crypt>
+      </tls-crypt>
+
+      <key>
+      </key>
+
+      <cert>
+      </cert>
+
+- name: "Create client req file"
+  command: ./easyrsa gen-req sega-{{ deployment_name }}-vpn-client nopass
+  args:
+    chdir: "~/openvpn-ca"
+    creates: "~/openvpn-ca/pki/reqs/sega-{{ deployment_name }}-vpn-client.req"
+
+- name: "Sign client req"
+  command: ./easyrsa sign-req client sega-{{ deployment_name }}-vpn-client
+  args:
+    chdir: "~/openvpn-ca"
+    creates: "~/openvpn-ca/pki/issued/sega-{{ deployment_name }}-vpn-client.crt"
+
+- name: Copy client config file
+  copy:
+    src: ~/openvpn-ca/client-configs/base.conf
+    remote_src: true
+    dest: ~/openvpn-ca/client-configs/sega-{{ deployment_name }}-vpn-client.ovpn
+
+- name: Read ca.crt
+  slurp:
+    src: ~/openvpn-ca/pki/ca.crt
+  register: ca_file_content
+
+- name: Set ca in ovpn file
+  lineinfile:
+    dest: "~/openvpn-ca/client-configs/sega-{{ deployment_name }}-vpn-client.ovpn"
+    regexp: "<ca>"
+    line: "<ca>\n{{ ca_file_content.content | bdecode }}"
+
+- name: Read ta.key
+  slurp:
+    src: ~/openvpn-ca/ta.key
+  register: ta_file_content
+
+- name: Set ta in ovpn file
+  lineinfile:
+    dest: "~/openvpn-ca/client-configs/sega-{{ deployment_name }}-vpn-client.ovpn"
+    regexp: "<tls-crypt>"
+    line: "<tls-crypt>\n{{ ta_file_content.content | bdecode }}"
+
+- name: Read client key
+  shell: "cat ~/openvpn-ca/pki/private/sega-{{ deployment_name }}-vpn-client.key"
+  register: client_key_file_content
+
+- name: Set client cert in ovpn file
+  lineinfile:
+    dest: "~/openvpn-ca/client-configs/sega-{{ deployment_name }}-vpn-client.ovpn"
+    regexp: "<key>"
+    line: "<key>\n{{ client_key_file_content.stdout }}"
+
+- name: Read client cert
+  shell: "cat ~/openvpn-ca/pki/issued/sega-{{ deployment_name }}-vpn-client.crt  | grep -Pzo '(?s)-----GIN CRTIICT-----.*-----ND CRTIICT-----'"
+  register: client_cert_file_content
+
+- name: Set client cert in ovpn file
+  lineinfile:
+    dest: "~/openvpn-ca/client-configs/sega-{{ deployment_name }}-vpn-client.ovpn"
+    regexp: "<cert>"
+    line: "<cert>\n{{ client_cert_file_content.stdout }}"
+
+- name: store ovpn in aws secrets manager
+  shell: "aws secretsmanager put-secret-value --secret-id {{ deployment_name }}/vpn-client-config --secret-string file:///root/openvpn-ca/client-configs/sega-{{ deployment_name }}-vpn-client.ovpn"

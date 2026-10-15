@@ -1,0 +1,232 @@
+{{- if .Values.worker.enabled }}
+{{- $name := include "fleet-project.name" . -}}
+{{- $ns := include "fleet-project.namespace" . -}}
+{{- $w := .Values.worker -}}
+{{- $workerName := printf "%s-worker" $name -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $workerName }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" . | nindent 4 }}
+    app: {{ $workerName }}
+    component: worker
+    tier: orchestration
+spec:
+  replicas: {{ $w.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ $workerName }}
+      component: worker
+  template:
+    metadata:
+      labels:
+        # L0 GUARD: app=<project>-worker is REQUIRED — K8sAdapter.get_worker_status
+        # lists pods with this selector (k8s_adapter.py:213-217).
+        app: {{ $workerName }}
+        component: worker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ include "fleet-project.serviceAccountName" . }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z {{ include "fleet-project.redisHost" . }} {{ .Values.redis.port }}; do echo waiting for redis; sleep 2; done']
+        {{- if .Values.database.enabled }}
+        - name: wait-for-postgres
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z {{ include "fleet-project.dbHost" . }} {{ .Values.database.port }}; do echo waiting for postgres; sleep 2; done']
+        {{- end }}
+      containers:
+        - name: worker
+          image: {{ include "fleet-project.image" (dict "root" . "image" $w.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with $w.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $w.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            # L0 GUARD: REDIS_PASSWORD must be supplied (worker.py:223 applies it).
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet-project.secretName" . }}
+                  key: redis_password
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $name }}-config
+                  key: redis_url
+            - name: POSTGRESQL_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet-project.secretName" . }}
+                  key: postgresql_url
+            - name: TIMESCALEDB_URL   # extension in the same DB; unset → localhost:5009
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet-project.secretName" . }}
+                  key: postgresql_url
+            - name: FLEET_ORCHESTRATION_MODE
+              value: {{ $w.orchestrationMode | quote }}
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            {{- if $w.logDir.enabled }}
+            # F5: the engine subprocess writes logs to a project path (e.g.
+            # /usr/src/logs) that is read-only in the image → PermissionError
+            # disables logging. Point <PROJECT>_LOG_DIR at a writable emptyDir.
+            - name: {{ required "worker.logDir.envName is required when worker.logDir.enabled (e.g. BOLTZMANN_LOG_DIR)" $w.logDir.envName }}
+              value: {{ $w.logDir.path | default "/tmp/logs" | quote }}
+            {{- end }}
+            # Same F5 class as logDir: the worker creates per-run engine dirs under
+            # SIMULATIONS_DIR, which defaults to a read-only project path
+            # (/usr/src/simulations) → PermissionError under the non-root image, so
+            # EVERY job failed instantly (no sim ran; KEDA saw the queue drain before
+            # it could sustain a scale-up). Point it at the writable `simulations`
+            # emptyDir mounted at /app/simulations below. (2026-08-02)
+            - name: SIMULATIONS_DIR
+              value: {{ $w.simulationsDir | default "/app/simulations" | quote }}
+            - name: ENGINE_SIMULATIONS_DIR
+              value: {{ $w.simulationsDir | default "/app/simulations" | quote }}
+            {{- if eq ($w.forwarder.mode | default "sidecar") "service" }}
+            # forwarder.mode=service: the engine subprocess reports to the shared
+            # forwarder Service, not localhost. NO engine code change needed —
+            # the engine already reads BACKEND_FORWARDER_HOST (engine_initialization.py:427,
+            # base_modem.py:127) and the worker passes its env through to the
+            # subprocess (worker.py:1030, os.environ.copy()). Default localhost
+            # (sidecar) is what the unset case gives, so this is service-only.
+            - name: BACKEND_FORWARDER_HOST
+              value: {{ $w.backendForwarderHost | default (printf "%s-forwarder.%s.svc.cluster.local" $name $ns) | quote }}
+            {{- end }}
+            {{- with $w.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml $w.resources | nindent 12 }}
+          {{- if ne ((default dict $w.probe).type | default "redis-ping") "none" }}
+          # Probe kind is worker.probe.type (default python redis-ping). Rust-worker
+          # projects MUST override to exec/tcp — a Rust image has no
+          # python binary, so the default redis-ping exec would crash-loop the pod.
+          livenessProbe:
+            {{- include "fleet-project.workerProbe" (dict "worker" $w "initialDelay" 30) | nindent 12 }}
+          readinessProbe:
+            {{- include "fleet-project.workerProbe" (dict "worker" $w "initialDelay" 10) | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: simulations
+              mountPath: {{ $w.simulationsDir | default "/app/simulations" | quote }}
+            {{- if $w.logDir.enabled }}
+            - name: logs
+              mountPath: {{ $w.logDir.path | default "/tmp/logs" }}
+            {{- end }}
+            {{- if $w.mountEngineConfig }}
+            - name: config
+              mountPath: /app/{{ $name }}.toml
+              subPath: {{ $name }}.toml
+            {{- end }}
+        {{- if eq ($w.forwarder.mode | default "sidecar") "sidecar" }}
+        # forwarder.mode=sidecar: engine_report runs in-pod so the engine's
+        # localhost:{{ $w.forwarder.reportPort }} report path stays valid with no engine/worker
+        # code change (Phase-1 test default). Each pod is its own DB writer.
+        - name: forwarder
+          image: {{ include "fleet-project.image" (dict "root" . "image" (empty $w.forwarder.image.repository | ternary $w.image $w.forwarder.image)) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml $w.forwarder.command | nindent 12 }}
+          ports:
+            - name: report
+              containerPort: {{ $w.forwarder.reportPort }}
+            - name: command
+              containerPort: {{ $w.forwarder.commandPort }}
+          env:
+            - name: POSTGRESQL_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet-project.secretName" . }}
+                  key: postgresql_url
+            - name: TIMESCALEDB_URL   # extension in the same DB; unset → localhost:5009
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet-project.secretName" . }}
+                  key: postgresql_url
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            {{- with $w.forwarder.extraEnv }}
+            # Project-specific forwarder env (additive; unset => reference shape
+            # unchanged). hermes's forwarder reads ENGINE_HOST/ENGINE_REPORT_PORT
+            # (default 7603 != hermes's 5510) + TSDB_* (create_url_from_env raises
+            # ModelError without TSDB_HOST) — none derivable from the fixed block.
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        {{- end }}
+      volumes:
+        - name: simulations
+          emptyDir: {}
+        {{- if $w.logDir.enabled }}
+        - name: logs
+          emptyDir: {}
+        {{- end }}
+        {{- if $w.mountEngineConfig }}
+        - name: config
+          configMap:
+            name: {{ $name }}-engine-config
+        {{- end }}
+      restartPolicy: Always
+      {{- if $w.antiAffinity }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: component
+                      operator: In
+                      values: ["worker"]
+                topologyKey: kubernetes.io/hostname
+      {{- end }}
+{{- if $w.keda.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $workerName }}-scaler
+  namespace: {{ $ns }}
+  labels:
+    {{- include "fleet-project.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ $workerName }}
+  pollingInterval: {{ $w.keda.pollingInterval | default 10 }}
+  cooldownPeriod: {{ $w.keda.cooldownPeriod | default 60 }}
+  minReplicaCount: {{ $w.keda.minReplicaCount | default 1 }}
+  maxReplicaCount: {{ $w.keda.maxReplicaCount | default 20 }}
+  triggers:
+    - type: redis
+      metadata:
+        # L0 GUARD: FQDN required (KEDA resolves from the keda namespace).
+        address: {{ $w.keda.address | default (printf "%s.%s.svc.cluster.local:%v" (include "fleet-project.redisHost" .) $ns .Values.redis.port) | quote }}
+        # L0 GUARD: listName must be a LIST the coordinator writes (or a ZSET
+        # mirrored to a LIST) — a raw ZSET returns LLEN 0 and never scales.
+        listName: {{ required "worker.keda.listName is required (the LIST KEDA watches — Appendix E.2/E.3)" $w.keda.listName | quote }}
+        listLength: {{ $w.keda.listLength | default "5" | quote }}
+        databaseIndex: {{ $w.keda.databaseIndex | default "0" | quote }}
+        {{- if .Values.redis.requireAuth }}
+        # KEDA reads the password from the scale target's REDIS_PASSWORD env
+        # (which the worker gets from the project Secret) — proven overlay pattern.
+        passwordFromEnv: REDIS_PASSWORD
+        {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,104 @@
+---
+# Example Server System Installation Playbook
+# System Type: server-jellyfish
+# Purpose: ull production server with platform services and VPN hub
+
+- name: Install Example Server System
+  hosts: all
+  become: yes
+  vars:
+    system_type: "server-jellyfish"
+    security_profile: "production"
+    vpn_mode: "server"
+    deployment_name: "{{ inventory_hostname | default('example-server') }}"
+    deployment_subnet: "..."
+
+  pre_tasks:
+    - name: Update system information
+      setup:
+      tags: always
+
+    - name: Verify OS compatibility
+      fail:
+        msg: "This playbook requires Ubuntu or compatible Linux distribution"
+      when: ansible_os_family != "Debian"
+      tags: always
+
+    - name: Verify system resources
+      fail:
+        msg: "Server installation requires at least G RM and G disk space"
+      when: ansible_memtotal_mb <  or ansible_mounts | selectattr('mount', 'equalto', '/') | map(attribute='size_available') | first < 
+      tags: always
+
+  roles:
+    - role: install_packages
+      tags: [packages, base]
+
+    - role: add_data_volume
+      tags: [storage, base]
+      vars:
+        data_volume_path: "/data"
+        data_volume_size: "G"
+
+    - role: install_fleet_platform
+      tags: [platform, services]
+      vars:
+        platform_services:
+          database: true
+          redis: true
+          backend: true
+          frontend: true
+          worker: true
+          scheduler: true
+          monitoring: true
+          nginx: true
+        docker_registry: "{{ fleet_docker_registry | default('') }}"
+        deployment_name: "{{ deployment_name }}"
+
+    - role: openvpn_server
+      tags: [vpn, networking]
+      vars:
+        deployment_subnet: "{{ deployment_subnet }}"
+
+    - role: configure_firewall
+      tags: [security, firewall]
+      vars:
+        firewall_rules:
+          - { port: , proto: tcp, source: any }    # SSH
+          - { port: , proto: tcp, source: any }    # HTTP
+          - { port: , proto: tcp, source: any }   # HTTPS
+          - { port: , proto: udp, source: any }  # OpenVPN
+          - { port: , proto: tcp, source: vpn }  # Backend PI
+          - { port: 5, proto: tcp, source: vpn }  # PostgreSQL
+          - { port: , proto: tcp, source: vpn }  # Redis
+
+  post_tasks:
+    - name: Create system type marker
+      file:
+        path: "{{ ansible_env.HOM }}/.sega/system_type"
+        content: "{{ system_type }}"
+        mode: ''
+      tags: [config, always]
+
+    - name: Setup monitoring dashboard access
+      debug:
+        msg:
+          - "Monitoring dashboards available at:"
+          - "  - lower (Celery): http://{{ ansible_default_ipv.address }}:5555"
+          - "  - Platform UI: http://{{ ansible_default_ipv.address }}"
+      tags: [always]
+
+    - name: Display installation summary
+      debug:
+        msg:
+          - "Example Server installation completed"
+          - "System Type: {{ system_type }}"
+          - "VPN Mode: {{ vpn_mode }} ({{ deployment_subnet }})"
+          - "Data Directory: /data"
+          - "Platform Services: Running"
+          - "Next Steps:"
+          - "  . Generate VPN client certificates for other systems"
+          - "  . Configure domain name and SSL certificates"
+          - "  . Deploy HL aAApplications using 'sega deploy'"
+          - "  . Run 'sega install validate' to verify installation"
+      tags: [always]

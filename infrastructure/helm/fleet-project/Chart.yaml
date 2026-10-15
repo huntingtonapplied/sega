@@ -1,0 +1,23 @@
+apiVersion: v2
+name: fleet-project
+description: >-
+  Fleet-standard Helm chart for simulation/scientific projects on Kubernetes.
+  One parameterized chart renders any registered project's full serving stack —
+  web tier (api/landing/product/ide), orchestration workers + KEDA, celery,
+  forwarder/reporter, the swarm triad, and in-cluster Redis + TimescaleDB —
+  driven by a per-project values-<proj>.yaml.
+# This is the T1 / G1 deliverable of:
+#   docs/architecture/infrastructure/aws/PRODUCTION_K8S_DEPLOYMENT_ARCHITECTURE.md
+#   sega/docs/plans/EKS_FLEET_MIGRATION_TOOLING_PLAN.md  (T1)
+# Consumed by sega's K8sDeployer (sega ship deploy --deploy-platform k8s).
+type: application
+version: 0.1.0
+# appVersion is per-project; override with --set image.tag / values-<proj>.yaml.
+appVersion: "0.1.0"
+keywords:
+  - fleet
+  - simulation
+  - keda
+  - orchestration
+maintainers:
+  - name: Example Infrastructure
